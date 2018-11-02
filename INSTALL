@@ -1,0 +1,19 @@
+Building from sources
+=======================
+
+Prerequisites:
+ - autoconf
+ - automake
+ - pkgconfig
+ - pppd
+
+Getting sources:
+ git clone git://github.com/pasis/pppoat2 pppoat2
+
+Compiling:
+ 1. run ./autogen.sh
+ 2. run ./configure
+ 3. run make
+
+Installing:
+ make install
