@@ -20,4 +20,4 @@ pppoat_LDFLAGS =
 
 man_MANS = docs/pppoat.8
 
-EXTRA_DIST = $(man_MANS) README.md autogen.sh
+EXTRA_DIST = $(man_MANS) autogen.sh Doxyfile README.md
