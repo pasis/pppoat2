@@ -17,3 +17,48 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "trace.h"
+
+#include "lock.h"
+
+void pppoat_mutex_init(struct pppoat_mutex *mutex)
+{
+	int rc;
+
+	rc = pthread_mutex_init(&mutex->m_mutex, NULL);
+	PPPOAT_ASSERT(rc == 0);
+}
+
+void pppoat_mutex_fini(struct pppoat_mutex *mutex)
+{
+	int rc;
+
+	rc = pthread_mutex_destroy(&mutex->m_mutex);
+	PPPOAT_ASSERT(rc == 0);
+}
+
+void pppoat_mutex_lock(struct pppoat_mutex *mutex)
+{
+	int rc;
+
+	rc = pthread_mutex_lock(&mutex->m_mutex);
+	PPPOAT_ASSERT(rc == 0);
+}
+
+void pppoat_mutex_unlock(struct pppoat_mutex *mutex)
+{
+	int rc;
+
+	rc = pthread_mutex_unlock(&mutex->m_mutex);
+	PPPOAT_ASSERT(rc == 0);
+}
+
+bool pppoat_mutex_trylock(struct pppoat_mutex *mutex)
+{
+	int rc;
+
+	rc = pthread_mutex_trylock(&mutex->m_mutex);
+	PPPOAT_ASSERT((rc == 0) || (rc == EBUSY));
+
+	return (rc == 0);
+}
