@@ -25,7 +25,6 @@
 
 #include <stdbool.h>	/* bool */
 #include <stddef.h>	/* size_t */
-#include <stdint.h>	/* uint32_t */
 
 /**
  * High level design.
@@ -110,12 +109,12 @@ struct pppoat_conf {
 };
 
 struct pppoat_conf_record {
-	char               *cr_key;
-	char               *cr_val;
-	unsigned long       cr_ref;
-	struct pppoat_conf *cr_conf;
-	struct pppoat_link  cr_link;
-	uint32_t            cr_magic;
+	char                    *cr_key;
+	char                    *cr_val;
+	unsigned long            cr_ref;
+	struct pppoat_conf      *cr_conf;
+	struct pppoat_list_link  cr_link;
+	uint32_t                 cr_magic;
 };
 
 int pppoat_conf_init(struct pppoat_conf *conf);
