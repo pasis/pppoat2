@@ -23,8 +23,8 @@
 
 static bool list_invariant(struct pppoat_list *list)
 {
-	struct pppoat_list_descr *descr = list->l_descr;
-	struct pppoat_list_link  *head  = &list->l_head;
+	const struct pppoat_list_descr *descr = list->l_descr;
+	struct pppoat_list_link        *head  = &list->l_head;
 
 	return descr != NULL &&
 	       list->l_magic == descr->ld_magic &&
@@ -32,8 +32,8 @@ static bool list_invariant(struct pppoat_list *list)
 		(head->ll_next != head && head->ll_prev != head));
 }
 
-void pppoat_list_init(struct pppoat_list       *list,
-		      struct pppoat_list_descr *descr)
+void pppoat_list_init(struct pppoat_list             *list,
+		      const struct pppoat_list_descr *descr)
 {
 	PPPOAT_ASSERT(descr->ld_name != NULL);
 

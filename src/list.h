@@ -75,13 +75,13 @@ struct pppoat_list_link {
 };
 
 struct pppoat_list {
-	struct pppoat_list_descr *l_descr;
-	struct pppoat_list_link   l_head;
-	uint32_t                  l_magic;
+	const struct pppoat_list_descr *l_descr;
+	struct pppoat_list_link         l_head;
+	uint32_t                        l_magic;
 };
 
-void pppoat_list_init(struct pppoat_list       *list,
-		      struct pppoat_list_descr *descr);
+void pppoat_list_init(struct pppoat_list             *list,
+		      const struct pppoat_list_descr *descr);
 void pppoat_list_fini(struct pppoat_list *list);
 
 void pppoat_list_insert(struct pppoat_list *list, void *obj);
