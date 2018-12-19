@@ -21,6 +21,7 @@
 #define __PPPOAT_LIST_H__
 
 #include <stdbool.h>	/* bool */
+#include <stddef.h>	/* offsetof */
 #include <stdint.h>	/* uint32_t */
 
 /**
@@ -109,5 +110,13 @@ void *pppoat_list_prev(struct pppoat_list *list, void *obj);
 bool pppoat_list_is_empty(struct pppoat_list *list);
 
 int pppoat_list_count(struct pppoat_list *list);
+
+#define PPPOAT_LIST_DESCR(name, type, link_field, magic_field, magic) \
+{                                                                     \
+	.ld_name      = name,                                         \
+	.ld_link_off  = offsetof(type, link_field),                   \
+	.ld_magic_off = offsetof(type, magic_field),                  \
+	.ld_magic     = magic,                                        \
+}
 
 #endif /* __PPPOAT_LIST_H__ */
