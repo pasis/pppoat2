@@ -34,7 +34,7 @@ struct pppoat_log_driver {
 	pppoat_log_driver_fini  ldrv_fini;
 	pppoat_log_driver_log   ldrv_log;
 	/** Private data, set and used by drivers */
-	void                   *priv;
+	void                   *ldrv_priv;
 };
 
 typedef enum {
