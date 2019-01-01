@@ -87,6 +87,38 @@ static void *list_link2obj(struct pppoat_list      *list,
 	return obj;
 }
 
+static void list_insert_before_link(struct pppoat_list      *list,
+				    void                    *obj,
+				    struct pppoat_list_link *before)
+{
+	struct pppoat_list_link *link = list_obj_link(list, obj);
+
+	PPPOAT_ASSERT(list_invariant(list));
+
+	link->ll_next = before;
+	link->ll_prev = before->ll_prev;
+	link->ll_prev->ll_next = link;
+	before->ll_prev = link;
+
+	list_obj_magic_set(list, obj);
+}
+
+static void list_insert_after_link(struct pppoat_list      *list,
+				   void                    *obj,
+				   struct pppoat_list_link *after)
+{
+	struct pppoat_list_link *link = list_obj_link(list, obj);
+
+	PPPOAT_ASSERT(list_invariant(list));
+
+	link->ll_next = after->ll_next;
+	link->ll_prev = after;
+	link->ll_next->ll_prev = link;
+	after->ll_next = link;
+
+	list_obj_magic_set(list, obj);
+}
+
 void pppoat_list_insert(struct pppoat_list *list, void *obj)
 {
 	pppoat_list_insert_head(list, obj);
@@ -94,48 +126,36 @@ void pppoat_list_insert(struct pppoat_list *list, void *obj)
 
 void pppoat_list_insert_head(struct pppoat_list *list, void *obj)
 {
-	pppoat_list_insert_after(list, obj, &list->l_head);
+	list_insert_after_link(list, obj, &list->l_head);
 }
 
 void pppoat_list_insert_tail(struct pppoat_list *list, void *obj)
 {
-	pppoat_list_insert_before(list, obj, &list->l_head);
+	list_insert_before_link(list, obj, &list->l_head);
 }
 
 void pppoat_list_insert_before(struct pppoat_list *list,
 			       void               *obj,
 			       void               *before)
 {
-	struct pppoat_list_link *link = list_obj_link(list, obj);
 	struct pppoat_list_link *link_before = list_obj_link(list, before);
 
 	PPPOAT_ASSERT(list_invariant(list));
 	PPPOAT_ASSERT(list_obj_magic_is_correct(list, before));
 
-	link->ll_next = link_before;
-	link->ll_prev = link_before->ll_prev;
-	link->ll_prev->ll_next = link;
-	link_before->ll_prev = link;
-
-	list_obj_magic_set(list, obj);
+	list_insert_before_link(list, obj, link_before);
 }
 
 void pppoat_list_insert_after(struct pppoat_list *list,
 			      void               *obj,
 			      void               *after)
 {
-	struct pppoat_list_link *link = list_obj_link(list, obj);
 	struct pppoat_list_link *link_after = list_obj_link(list, after);
 
 	PPPOAT_ASSERT(list_invariant(list));
 	PPPOAT_ASSERT(list_obj_magic_is_correct(list, after));
 
-	link->ll_next = link_after->ll_next;
-	link->ll_prev = link_after;
-	link->ll_next->ll_prev = link;
-	link_after->ll_next = link;
-
-	list_obj_magic_set(list, obj);
+	list_insert_after_link(list, obj, link_after);
 }
 
 void pppoat_list_del(struct pppoat_list *list, void *obj)
