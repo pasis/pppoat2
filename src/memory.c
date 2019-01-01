@@ -24,15 +24,18 @@
 void *pppoat_alloc(size_t size)
 {
 	return malloc(size);
+	/* TODO Poison. Objects must be initialised explicitly. */
 }
 
 void pppoat_free(void *ptr)
 {
+	/* TODO Poison. */
 	free(ptr);
 }
 
 void *pppoat_calloc(size_t nmemb, size_t size)
 {
+	/* TODO Use pppoat_alloc(). */
 	return calloc(nmemb, size);
 }
 
