@@ -1,5 +1,5 @@
-/* lock.h
- * PPP over Any Transport -- Locking primitives
+/* mutex.h
+ * PPP over Any Transport -- Platform-independent mutex wrappers
  *
  * Copyright (C) 2012-2018 Dmitry Podgorny <pasis.ua@gmail.com>
  *
@@ -22,6 +22,42 @@
 
 #include <pthread.h>	/* pthread_mutex_t */
 #include <stdbool.h>	/* bool */
+
+/**
+ * Future work.
+ *
+ * There may be multiple implementations of the same locking primitive. For
+ * example, pthread mutex and C11 mutex. Therefore, PPPoAT structures
+ * should include one more abstraction layer:
+ *
+ * struct pppoat_mutex {
+ * 	struct pppoat_mutex_impl m_mutex;
+ * };
+ *
+ * struct pppoat_mutex_impl {
+ * 	struct pthread_mutex_t mi_mutex;
+ * 	or
+ * 	mtx_t mi_mutex;
+ * };
+ *
+ * Creating several pppoat_mutex classes is not an option, because it may
+ * contain common fields in the future.
+ *
+ * Mutex can be improved in the next way:
+ *
+ * struct pppoat_mutex {
+ * 	struct pppoat_mutex_impl  m_mutex;
+ * 	const char               *m_name;
+ * 	unsigned long             m_owner;
+ * 	struct pppoat_list_link   m_link;
+ * };
+ *
+ * All the new fields are supposed to make debugging easier. On a crash or
+ * deadlock it is possible to iterate all locks in the system and print their
+ * names, locking fact, and thread which owns the lock.
+ * Owner is an identifier which allows to find proper thread in gdb. Also, this
+ * field can be used to check whether mutex is locked by current thread or not.
+ */
 
 struct pppoat_mutex {
 	pthread_mutex_t m_mutex;

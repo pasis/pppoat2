@@ -6,14 +6,14 @@ bin_PROGRAMS = pppoat
 pppoat_common_sources =	\
 	src/conf.c	\
 	src/list.c	\
-	src/lock.c	\
+	src/mutex.c	\
 	src/log.c	\
 	src/memory.c
 
 pppoat_common_headers =	\
 	src/conf.h	\
 	src/list.h	\
-	src/lock.h	\
+	src/mutex.h	\
 	src/log.h	\
 	src/memory.h	\
 	src/misc.h	\

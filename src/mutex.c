@@ -1,5 +1,5 @@
-/* lock.c
- * PPP over Any Transport -- Locking primitives
+/* mutex.c
+ * PPP over Any Transport -- Platform-independent mutex wrappers
  *
  * Copyright (C) 2012-2018 Dmitry Podgorny <pasis.ua@gmail.com>
  *
@@ -19,7 +19,7 @@
 
 #include "trace.h"
 
-#include "lock.h"
+#include "mutex.h"
 
 void pppoat_mutex_init(struct pppoat_mutex *mutex)
 {

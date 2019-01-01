@@ -21,7 +21,7 @@
 #define __PPPOAT_CONF_H__
 
 #include "list.h"
-#include "lock.h"
+#include "mutex.h"
 
 #include <stdbool.h>	/* bool */
 #include <stddef.h>	/* size_t */
