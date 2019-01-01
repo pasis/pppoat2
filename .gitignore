@@ -16,8 +16,14 @@ ltmain.sh
 .dirstamp
 .deps
 
-src/*.o
+test-driver
+test-suite.log
+ut/ut.log
+ut/ut.trs
+
+*.o
 pppoat
+ut/ut
 docs/html
 
 *.swp
