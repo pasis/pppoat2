@@ -181,7 +181,9 @@ void *pppoat_list_pop(struct pppoat_list *list)
 {
 	void *obj = pppoat_list_head(list);
 
-	pppoat_list_del(list, obj);
+	if (obj != NULL)
+		pppoat_list_del(list, obj);
+
 	return obj;
 }
 
