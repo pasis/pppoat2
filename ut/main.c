@@ -30,8 +30,10 @@ static struct pppoat_ut ut_inst;
 void add_all_tests(struct pppoat_ut *ut)
 {
 	extern struct pppoat_ut_group pppoat_tests_list;
+	extern struct pppoat_ut_group pppoat_tests_packet;
 
 	pppoat_ut_group_add(ut, &pppoat_tests_list);
+	pppoat_ut_group_add(ut, &pppoat_tests_packet);
 }
 
 int main(int argc, char **argv)
