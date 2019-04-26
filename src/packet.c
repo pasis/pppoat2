@@ -19,19 +19,18 @@
 
 #include "log.h"
 
+#include "magic.h"
 #include "memory.h"
 #include "packet.h"
 
-#define PACKET_CACHE_MAGIC 0xcac4ed00
-
-static struct pppoat_list_descr pkts_cache_descr =
+static struct pppoat_list_descr packets_cache_descr =
 	PPPOAT_LIST_DESCR("Packets cache", struct pppoat_packet, pkt_cache_link,
-			  pkt_cache_magic, PACKET_CACHE_MAGIC);
+			  pkt_cache_magic, PPPOAT_PACKETS_CACHE_MAGIC);
 
 int pppoat_packets_init(struct pppoat_packets *pkts)
 {
 	pppoat_mutex_init(&pkts->pks_lock);
-	pppoat_list_init(&pkts->pks_cache, &pkts_cache_descr);
+	pppoat_list_init(&pkts->pks_cache, &packets_cache_descr);
 
 	return 0;
 }

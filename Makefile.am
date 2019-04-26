@@ -16,6 +16,7 @@ pppoat_common_headers =	\
 	src/list.h	\
 	src/mutex.h	\
 	src/log.h	\
+	src/magic.h	\
 	src/memory.h	\
 	src/misc.h	\
 	src/packet.h	\
