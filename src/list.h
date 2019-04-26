@@ -101,6 +101,7 @@ void *pppoat_list_pop(struct pppoat_list *list);
 
 void pppoat_list_enqueue(struct pppoat_list *list, void *obj);
 void *pppoat_list_dequeue(struct pppoat_list *list);
+void *pppoat_list_dequeue_last(struct pppoat_list *list);
 
 void *pppoat_list_head(struct pppoat_list *list);
 void *pppoat_list_tail(struct pppoat_list *list);
