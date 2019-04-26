@@ -39,8 +39,8 @@ struct pppoat_packet {
 	void                     *pkt_data;
 	struct pppoat_packet_ops *pkt_ops;
 	/** Link for queue/pipeline. */
-	struct pppoat_list_link   pkt_link;
-	uint32_t                  pkt_magic;
+	struct pppoat_list_link   pkt_q_link;
+	uint32_t                  pkt_q_magic;
 	/** Link for cache. */
 	struct pppoat_list_link   pkt_cache_link;
 	uint32_t                  pkt_cache_magic;

@@ -19,7 +19,6 @@
 
 #include "trace.h"
 
-#include "log.h"
 #include "ut/ut.h"
 
 #include <stdio.h>
@@ -31,9 +30,11 @@ void add_all_tests(struct pppoat_ut *ut)
 {
 	extern struct pppoat_ut_group pppoat_tests_list;
 	extern struct pppoat_ut_group pppoat_tests_packet;
+	extern struct pppoat_ut_group pppoat_tests_queue;
 
 	pppoat_ut_group_add(ut, &pppoat_tests_list);
 	pppoat_ut_group_add(ut, &pppoat_tests_packet);
+	pppoat_ut_group_add(ut, &pppoat_tests_queue);
 }
 
 int main(int argc, char **argv)

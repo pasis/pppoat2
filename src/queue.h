@@ -1,5 +1,5 @@
-/* magic.h
- * PPP over Any Transport -- Magic constants
+/* queue.h
+ * PPP over Any Transport -- Packet queue
  *
  * Copyright (C) 2012-2019 Dmitry Podgorny <pasis.ua@gmail.com>
  *
@@ -17,21 +17,23 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __PPPOAT_MAGIC_H__
-#define __PPPOAT_MAGIC_H__
+#ifndef __PPPOAT_QUEUE_H__
+#define __PPPOAT_QUEUE_H__
 
-/**
- * This file contains various constants used for sanity checks.
- *
- * An integer magic number is an uint32_t number which in HEX representation
- * consists of exactly 8 numbers and creates a human-readable word or pattern.
- * Magic number should be normalized (use capital letters for the HEX).
- */
+#include "list.h"
+#include "mutex.h"
 
-/* packet.c::packets_cache_descr */
-#define PPPOAT_PACKETS_CACHE_MAGIC 0xCAC4ED00
+struct pppoat_packet;
 
-/* queue.c::queue_descr */
-#define PPPOAT_QUEUE_MAGIC 0xC0DEC001
+struct pppoat_queue {
+	struct pppoat_list  q_queue;
+	struct pppoat_mutex q_lock;
+};
 
-#endif /* __PPPOAT_MAGIC_H__ */
+int pppoat_queue_init(struct pppoat_queue *q);
+void pppoat_queue_fini(struct pppoat_queue *q);
+void pppoat_queue_enqueue(struct pppoat_queue *q, struct pppoat_packet *pkt);
+struct pppoat_packet *pppoat_queue_dequeue(struct pppoat_queue *q);
+struct pppoat_packet *pppoat_queue_dequeue_last(struct pppoat_queue *q);
+
+#endif /* __PPPOAT_QUEUE_H__ */

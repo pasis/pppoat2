@@ -9,7 +9,8 @@ pppoat_common_sources =	\
 	src/mutex.c	\
 	src/log.c	\
 	src/memory.c	\
-	src/packet.c
+	src/packet.c	\
+	src/queue.c
 
 pppoat_common_headers =	\
 	src/conf.h	\
@@ -20,6 +21,7 @@ pppoat_common_headers =	\
 	src/memory.h	\
 	src/misc.h	\
 	src/packet.h	\
+	src/queue.h	\
 	src/trace.h
 
 pppoat_SOURCES =		\
@@ -45,6 +47,7 @@ ut_ut_SOURCES =			\
 	ut/list.c		\
 	ut/main.c		\
 	ut/packet.c		\
+	ut/queue.c		\
 	ut/ut.c
 
 ut_ut_SOURCES +=		\
