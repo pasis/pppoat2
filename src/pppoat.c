@@ -18,7 +18,6 @@
  */
 
 #include "trace.h"
-#include "log.h"
 #include "memory.h"
 
 #include "pppoat.h"
