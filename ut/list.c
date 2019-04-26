@@ -62,7 +62,7 @@ static struct ut_list_st *ut_list_obj_new(int index)
 }
 
 /*
- * Destroys object and check if it is corrupted.
+ * Destroys object and checks whether it is corrupted or not.
  */
 static void ut_list_obj_destroy(struct ut_list_st *obj, int index)
 {
