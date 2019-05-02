@@ -164,6 +164,8 @@ void pppoat_list_del(struct pppoat_list *list, void *obj)
 
 	PPPOAT_ASSERT(list_invariant(list));
 	PPPOAT_ASSERT(list_obj_magic_is_correct(list, obj));
+	PPPOAT_ASSERT(link->ll_prev->ll_next == link);
+	PPPOAT_ASSERT(link->ll_next->ll_prev == link);
 
 	link->ll_prev->ll_next = link->ll_next;
 	link->ll_next->ll_prev = link->ll_prev;
