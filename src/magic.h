@@ -34,4 +34,7 @@
 /* queue.c::queue_descr */
 #define PPPOAT_QUEUE_MAGIC 0xC0DEC001
 
+/* conf.c::conf_store_descr */
+#define PPPOAT_CONF_STORE_MAGIC 0xD15CC0DE
+
 #endif /* __PPPOAT_MAGIC_H__ */

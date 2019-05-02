@@ -20,50 +20,182 @@
 #include "trace.h"
 
 #include "conf.h"
+#include "memory.h"
+#include "magic.h"
+#include "misc.h"	/* pppoat_strtol */
+
+#include <string.h>	/* strcmp, strlen */
+
+static struct pppoat_list_descr conf_store_descr =
+	PPPOAT_LIST_DESCR("Conf store", struct pppoat_conf_record, cr_link,
+			  cr_magic, PPPOAT_CONF_STORE_MAGIC);
+
+static void conf_record_get_locked(struct pppoat_conf_record *r);
+static void conf_record_put_locked(struct pppoat_conf_record *r);
 
 int pppoat_conf_init(struct pppoat_conf *conf)
 {
+	pppoat_mutex_init(&conf->c_lock);
+	pppoat_list_init(&conf->c_store, &conf_store_descr);
+	conf->c_store_nr = 0;
+	conf->c_gen = 0;
+
 	return 0;
 }
 
 void pppoat_conf_fini(struct pppoat_conf *conf)
 {
+	pppoat_conf_flush(conf);
+	pppoat_list_fini(&conf->c_store);
+	pppoat_mutex_fini(&conf->c_lock);
 }
 
 void pppoat_conf_flush(struct pppoat_conf *conf)
 {
+	struct pppoat_conf_record *r;
+
+	pppoat_mutex_lock(&conf->c_lock);
+	while (!pppoat_list_is_empty(&conf->c_store)) {
+		r = pppoat_list_pop(&conf->c_store);
+		conf_record_put_locked(r);
+	}
+	conf->c_store_nr = 0;
+	++conf->c_gen;
+	pppoat_mutex_unlock(&conf->c_lock);
+}
+
+static struct pppoat_conf_record *conf_record_new(struct pppoat_conf *conf,
+						  const char         *key,
+						  const char         *val)
+{
+	struct pppoat_conf_record *r;
+
+	r = pppoat_alloc(sizeof *r);
+	if (r != NULL) {
+		r->cr_key = pppoat_strdup(key);
+		r->cr_val = pppoat_strdup(val);
+		if (r->cr_key == NULL || r->cr_val == NULL)
+			goto err_free;
+		r->cr_conf = conf;
+		r->cr_ref  = 1;
+	}
+	return r;
+
+err_free:
+	pppoat_free(r->cr_key);
+	pppoat_free(r->cr_val);
+	pppoat_free(r);
+	return NULL;
+}
+
+static void conf_record_destroy(struct pppoat_conf_record *r)
+{
+	struct pppoat_conf *conf = r->cr_conf;
+
+	PPPOAT_ASSERT(r->cr_ref == 0);
+
+	/* Current function is called under conf->c_lock lock. */
+	pppoat_list_del(&conf->c_store, r);
+
+	pppoat_free(r->cr_key);
+	pppoat_free(r->cr_val);
+	pppoat_free(r);
 }
 
 int pppoat_conf_store(struct pppoat_conf *conf,
 		      const char         *key,
 		      const char         *val)
 {
+	struct pppoat_conf_record *r;
+
+	r = conf_record_new(conf, key, val);
+	if (r == NULL)
+		return P_ERR(-ENOMEM);
+
+	pppoat_mutex_lock(&conf->c_lock);
+	pppoat_list_insert(&conf->c_store, r);
+	++conf->c_gen;
+	pppoat_mutex_unlock(&conf->c_lock);
+
 	return 0;
 }
 
 void pppoat_conf_drop(struct pppoat_conf *conf, const char *key)
 {
+	struct pppoat_conf_record *r;
+
+	r = pppoat_conf_lookup(conf, key);
+	if (r != NULL) {
+		/* Release reference gotten by LOOKUP. */
+		pppoat_conf_record_put(r);
+		/* Release reference gotten by conf_record_new(). */
+		pppoat_conf_record_put(r);
+	}
 }
 
 struct pppoat_conf_record *pppoat_conf_lookup(struct pppoat_conf *conf,
 					      const char         *key)
 {
-	return NULL;
+	struct pppoat_conf_record *r;
+
+	pppoat_mutex_lock(&conf->c_lock);
+	for (r = pppoat_list_head(&conf->c_store); r != NULL;
+	     r = pppoat_list_next(&conf->c_store, r)) {
+		if (strcmp(key, r->cr_key) == 0)
+			break;
+	}
+	if (r != NULL)
+		conf_record_get_locked(r);
+	pppoat_mutex_unlock(&conf->c_lock);
+
+	return r;
 }
 
-void pppoat_conf_record_get(struct pppoat_conf_record *record)
+static void conf_record_get_locked(struct pppoat_conf_record *r)
 {
+	/* If a reference == 0 we must not use the object. */
+	PPPOAT_ASSERT(r->cr_ref > 0);
+
+	++r->cr_ref;
 }
 
-void pppoat_conf_record_put(struct pppoat_conf_record *record)
+void pppoat_conf_record_get(struct pppoat_conf_record *r)
 {
+	pppoat_mutex_lock(&r->cr_conf->c_lock);
+	conf_record_get_locked(r);
+	pppoat_mutex_unlock(&r->cr_conf->c_lock);
+}
+
+static void conf_record_put_locked(struct pppoat_conf_record *r)
+{
+	PPPOAT_ASSERT(r->cr_ref > 0);
+
+	--r->cr_ref;
+	if (r->cr_ref == 0)
+		conf_record_destroy(r);
+}
+
+void pppoat_conf_record_put(struct pppoat_conf_record *r)
+{
+	pppoat_mutex_lock(&r->cr_conf->c_lock);
+	conf_record_put_locked(r);
+	pppoat_mutex_unlock(&r->cr_conf->c_lock);
 }
 
 int pppoat_conf_find_long(struct pppoat_conf *conf,
 			  const char         *key,
 			  long               *out)
 {
-	return 0;
+	struct pppoat_conf_record *r;
+	int                        rc;
+
+	r  = pppoat_conf_lookup(conf, key);
+	rc = r == NULL ? P_ERR(-ENOENT) : 0;
+	if (rc == 0) {
+		rc = pppoat_strtol(r->cr_val, out);
+		pppoat_conf_record_put(r);
+	}
+	return rc;
 }
 
 int pppoat_conf_find_string(struct pppoat_conf *conf,
@@ -71,14 +203,47 @@ int pppoat_conf_find_string(struct pppoat_conf *conf,
 			    char               *out,
 			    size_t              outlen)
 {
-	return 0;
+	struct pppoat_conf_record *r;
+	size_t                     len;
+	int                        rc;
+
+	r  = pppoat_conf_lookup(conf, key);
+	rc = r == NULL ? P_ERR(-ENOENT) : 0;
+	if (rc == 0) {
+		len = strlen(r->cr_val);
+		if (len >= outlen)
+			rc = P_ERR(-ERANGE);
+		else
+			strcpy(out, r->cr_val);
+		pppoat_conf_record_put(r);
+	}
+	return rc;
 }
 
 int pppoat_conf_find_string_alloc(struct pppoat_conf  *conf,
 				  const char          *key,
 				  char               **out)
 {
-	return 0;
+	struct pppoat_conf_record *r;
+	char                      *val;
+	size_t                     len;
+	int                        rc;
+
+	r  = pppoat_conf_lookup(conf, key);
+	rc = r == NULL ? P_ERR(-ENOENT) : 0;
+	if (rc == 0) {
+		len = strlen(r->cr_val);
+		val = pppoat_alloc(len + 1);
+		if (val == NULL)
+			rc = P_ERR(-ENOMEM);
+		else
+			strcpy(val, r->cr_val);
+		pppoat_conf_record_put(r);
+	}
+	if (rc == 0)
+		*out = val;
+
+	return rc;
 }
 
 /*

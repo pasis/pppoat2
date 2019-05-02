@@ -45,6 +45,7 @@ TESTS = $(check_PROGRAMS)
 
 ut_ut_SOURCES =			\
 	$(pppoat_common_sources)\
+	ut/conf.c		\
 	ut/list.c		\
 	ut/main.c		\
 	ut/packet.c		\

@@ -111,7 +111,8 @@ struct pppoat_conf {
 struct pppoat_conf_record {
 	char                    *cr_key;
 	char                    *cr_val;
-	unsigned long            cr_ref;
+	/* Reference counter. Use signed type to catch memory corruptions. */
+	long                     cr_ref;
 	struct pppoat_conf      *cr_conf;
 	struct pppoat_list_link  cr_link;
 	uint32_t                 cr_magic;
@@ -143,9 +144,9 @@ struct pppoat_conf_record *pppoat_conf_lookup(struct pppoat_conf *conf,
 					      const char         *key);
 
 /** Get reference to the record. */
-void pppoat_conf_record_get(struct pppoat_conf_record *record);
+void pppoat_conf_record_get(struct pppoat_conf_record *r);
 /** Release reference to the record. */
-void pppoat_conf_record_put(struct pppoat_conf_record *record);
+void pppoat_conf_record_put(struct pppoat_conf_record *r);
 
 /**
  * Configuration wrappers.
