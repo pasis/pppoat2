@@ -27,4 +27,6 @@ void  pppoat_free(void *ptr);
 void *pppoat_calloc(size_t nmemb, size_t size);
 void *pppoat_realloc(void *ptr, size_t size);
 
+char *pppoat_strdup(const char *s);
+
 #endif /* __PPPOAT_MEMORY_H__ */

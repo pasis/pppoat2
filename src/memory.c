@@ -20,6 +20,7 @@
 #include "memory.h"
 
 #include <stdlib.h>
+#include <string.h>
 
 void *pppoat_alloc(size_t size)
 {
@@ -42,4 +43,16 @@ void *pppoat_calloc(size_t nmemb, size_t size)
 void *pppoat_realloc(void *ptr, size_t size)
 {
 	return realloc(ptr, size);
+}
+
+char *pppoat_strdup(const char *s)
+{
+	size_t  len = strlen(s);
+	char   *copy;
+
+	copy = pppoat_alloc(len + 1);
+	if (copy != NULL)
+		strcpy(copy, s);
+
+	return copy;
 }
