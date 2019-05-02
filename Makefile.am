@@ -9,6 +9,7 @@ pppoat_common_sources =	\
 	src/mutex.c	\
 	src/log.c	\
 	src/memory.c	\
+	src/misc.c	\
 	src/packet.c	\
 	src/queue.c
 

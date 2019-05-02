@@ -1,7 +1,7 @@
-/* misc.h
+/* misc.c
  * PPP over Any Transport -- Helper routines and macros
  *
- * Copyright (C) 2012-2018 Dmitry Podgorny <pasis.ua@gmail.com>
+ * Copyright (C) 2012-2019 Dmitry Podgorny <pasis.ua@gmail.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,21 +17,25 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __PPPOAT_MISC_H__
-#define __PPPOAT_MISC_H__
+#include "trace.h"
 
-#ifndef ARRAY_SIZE
-#define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
-#endif
+#include "misc.h"
 
-/**
- * Converts string to long.
- *
- * If the entire string can be converted and the result can be represented by
- * long, the result is returned in `out'. Otherwise, conversion fails.
- *
- * @return 0 on success or negative error code otherwise.
- */
-int pppoat_strtol(char *str, long *out);
+#include <errno.h>
+#include <stdlib.h>	/* strtol */
 
-#endif /* __PPPOAT_MISC_H__ */
+int pppoat_strtol(char *str, long *out)
+{
+	char *endptr;
+	long  val;
+
+	errno = 0;
+	val = strtol(str, &endptr, 10);
+	if (errno == ERANGE)
+		return P_ERR(-ERANGE);
+	if (*str == '\0' || *endptr != '\0')
+		return P_ERR(-EINVAL);
+
+	*out = val;
+	return 0;
+}
