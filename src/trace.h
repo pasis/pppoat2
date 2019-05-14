@@ -44,10 +44,10 @@
 
 #define P_ERR(error)                                          \
 	({                                                    \
-		int __error = (error);                        \
+		int __perror = (error);                       \
 		pppoat_error("trace", TRACE_LOC_F" error=%d", \
-			     TRACE_LOC_P, __error);           \
-		__error;                                      \
+			     TRACE_LOC_P, __perror);          \
+		__perror;                                     \
 	})
 
 #define PPPOAT_ASSERT_INFO(expr, fmt, ...)                                     \
