@@ -71,7 +71,7 @@ struct pppoat_packet *pppoat_packet_get(struct pppoat_packets *pkts)
 	struct pppoat_packet *pkt;
 
 	pppoat_mutex_lock(&pkts->pks_lock);
-	pkt = pppoat_list_head(&pkts->pks_cache);
+	pkt = pppoat_list_pop(&pkts->pks_cache);
 	pppoat_mutex_unlock(&pkts->pks_lock);
 
 	if (pkt == NULL)
@@ -85,7 +85,7 @@ void pppoat_packet_put(struct pppoat_packets *pkts, struct pppoat_packet *pkt)
 {
 	packet_fini(pkt);
 	pppoat_mutex_lock(&pkts->pks_lock);
-	pppoat_list_insert(&pkts->pks_cache, pkt);
+	pppoat_list_push(&pkts->pks_cache, pkt);
 	pppoat_mutex_unlock(&pkts->pks_lock);
 }
 
