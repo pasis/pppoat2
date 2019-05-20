@@ -25,6 +25,14 @@
 #endif
 
 /**
+ * Implication.
+ *
+ * In other words, if p is true, then q is also true. This macro is intended
+ * to be used in conditions, especially in assertions like PPPOAT_ASSERT().
+ */
+#define imply(p, q) (!(p) || (q))
+
+/**
  * Converts string to long.
  *
  * If the entire string can be converted and the result can be represented by
