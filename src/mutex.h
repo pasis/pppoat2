@@ -17,8 +17,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __PPPOAT_LOCK_H__
-#define __PPPOAT_LOCK_H__
+#ifndef __PPPOAT_MUTEX_H__
+#define __PPPOAT_MUTEX_H__
 
 #include <pthread.h>	/* pthread_mutex_t */
 #include <stdbool.h>	/* bool */
@@ -69,4 +69,4 @@ void pppoat_mutex_lock(struct pppoat_mutex *mutex);
 void pppoat_mutex_unlock(struct pppoat_mutex *mutex);
 bool pppoat_mutex_trylock(struct pppoat_mutex *mutex);
 
-#endif /* __PPPOAT_LOCK_H__ */
+#endif /* __PPPOAT_MUTEX_H__ */
