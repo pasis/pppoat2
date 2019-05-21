@@ -77,7 +77,7 @@ static const char *if_pppd_path(void)
 		if (rc == 0)
 			return pppd_paths[i];
 		if (rc != -ENOENT)
-			pppoat_info("if_pppd",
+			pppoat_info("pppd",
 				    "%s exists, but not executable (rc=%d)",
 				    pppd_paths[i], rc);
 	}
@@ -169,7 +169,8 @@ static void if_pppd_worker(struct pppoat_thread *thread)
 		pkt->pkt_data = buf;
 		pkt->pkt_size = rlen;
 		pkt->pkt_ops = &pppoat_packet_ops_std;
-		pppoat_debug("pppd", "%p Send pkt size=%zu", ctx->ipc_module, pkt->pkt_size);
+		pppoat_debug("pppd", "%p Send pkt size=%zu",
+			     ctx->ipc_module, pkt->pkt_size);
 		rc = pppoat_pipeline_packet_send(pipeline, ctx->ipc_module,
 						 pkt);
 		if (rc != 0)
@@ -206,13 +207,13 @@ static int if_pppd_run(struct pppoat_module *mod)
 		close(pipe_wr[0]);
 		close(pipe_wr[1]);
 
-		pppoat_debug("if_pppd", "%s nodetach noauth notty passive %s",
+		pppoat_debug("pppd", "%s nodetach noauth notty passive %s",
 			     ctx->ipc_pppd_path,
 			     ctx->ipc_ip == NULL ? "" : ctx->ipc_ip);
 		pppoat_log_flush();
 		rc = execl(ctx->ipc_pppd_path, ctx->ipc_pppd_path, "nodetach",
 			   "noauth", "notty", "passive", ctx->ipc_ip, NULL);
-		pppoat_error("if_pppd", "Failed to execute pppd, rc=%d errno=%d",
+		pppoat_error("pppd", "Failed to execute pppd, rc=%d errno=%d",
 			     rc, errno);
 		exit(1);
 	}
@@ -261,9 +262,8 @@ static int if_pppd_recv(struct pppoat_module *mod, struct pppoat_packet *pkt)
 	int                 rc;
 
 	PPPOAT_ASSERT(if_pppd_ctx_invariant(ctx));
-	/* PPPOAT_ASSERT(pkt->pkt_type == PPPOAT_PACKET_RECV); XXX loopback */
 
-	pppoat_debug("pppd", "%p Received pkt size=%zu", mod, pkt->pkt_size);
+	pppoat_debug("pppd", "%p Recv pkt size=%zu", mod, pkt->pkt_size);
 
 	rc = pppoat_io_write_sync(ctx->ipc_wr, pkt->pkt_data, pkt->pkt_size);
 	PPPOAT_ASSERT(rc == 0); /* XXX */
