@@ -132,6 +132,16 @@ int main(int argc, char **argv)
 	/* First, initialise default logger to catch logging on early stages. */
 	log_init_or_exit(NULL);
 
+	pppoat_info("pppoat", "Current version is under development!");
+	pppoat_info("pppoat", "You can try PPP over UDP in the following way:");
+	pppoat_info("pppoat", "Make sure you have pppd (package ppp) and run the commands");
+	pppoat_info("pppoat", "on the hosts you want to connect (replace port number and addresses");
+	pppoat_info("pppoat", "with proper values, -s must be passed on a single host).");
+	pppoat_info("pppoat", "");
+	pppoat_info("pppoat", "  pppoat -s pppd.port=5000 pppd.host=192.168.1.2");
+	pppoat_info("pppoat", "  pppoat pppd.port=5000 pppd.host=192.168.1.1");
+	pppoat_info("pppoat", "");
+
 	pppoat_semaphore_init(&exit_sem, 0);
 	rc = sigaction(SIGTERM, &act, NULL);
 	rc = rc ?: sigaction(SIGINT, &act, NULL);
