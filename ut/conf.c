@@ -21,9 +21,10 @@
 
 #include "conf.h"
 #include "memory.h"
+#include "misc.h"	/* pppoat_streq */
 #include "ut/ut.h"
 
-#include <string.h>	/* strcmp */
+#include <string.h>
 
 static const char *ut_conf_simple_key = "simple_key";
 static const char *ut_conf_simple_val = "simple_val";
@@ -46,12 +47,12 @@ static void ut_conf_simple(void)
 
 	r = pppoat_conf_lookup(conf, ut_conf_simple_key);
 	PPPOAT_ASSERT(r != NULL);
-	PPPOAT_ASSERT(strcmp(r->cr_val, ut_conf_simple_val) == 0);
+	PPPOAT_ASSERT(pppoat_streq(r->cr_val, ut_conf_simple_val));
 	pppoat_conf_record_put(r);
 
 	rc = pppoat_conf_find_string_alloc(conf, ut_conf_simple_key, &str);
 	PPPOAT_ASSERT(rc == 0);
-	PPPOAT_ASSERT(strcmp(str, ut_conf_simple_val) == 0);
+	PPPOAT_ASSERT(pppoat_streq(str, ut_conf_simple_val));
 	pppoat_free(str);
 
 	pppoat_conf_drop(conf, ut_conf_simple_key);
