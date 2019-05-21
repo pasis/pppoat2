@@ -52,6 +52,7 @@ void pppoat_packets_fini(struct pppoat_packets *pkts)
 
 static void packet_init(struct pppoat_packet *pkt)
 {
+	pkt->pkt_type = PPPOAT_PACKET_UNKNOWN;
 	pkt->pkt_size = 0;
 	pkt->pkt_data = NULL;
 	pkt->pkt_ops = NULL;

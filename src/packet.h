@@ -30,11 +30,18 @@ struct pppoat_packets {
 	struct pppoat_mutex pks_lock;
 };
 
+enum pppoat_packet_type {
+	PPPOAT_PACKET_UNKNOWN,
+	PPPOAT_PACKET_SEND,
+	PPPOAT_PACKET_RECV,
+};
+
 struct pppoat_packet_ops {
 	void (*pko_free)(struct pppoat_packet *pkt);
 };
 
 struct pppoat_packet {
+	enum pppoat_packet_type   pkt_type;
 	size_t                    pkt_size;
 	void                     *pkt_data;
 	struct pppoat_packet_ops *pkt_ops;
