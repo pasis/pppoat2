@@ -22,9 +22,9 @@
 #include "conf.h"
 #include "memory.h"
 #include "magic.h"
-#include "misc.h"	/* pppoat_strtol */
+#include "misc.h"	/* pppoat_strtol, pppoat_streq */
 
-#include <string.h>	/* strcmp, strlen */
+#include <string.h>	/* strlen */
 
 static struct pppoat_list_descr conf_store_descr =
 	PPPOAT_LIST_DESCR("Conf store", struct pppoat_conf_record, cr_link,
@@ -32,6 +32,9 @@ static struct pppoat_list_descr conf_store_descr =
 
 static void conf_record_get_locked(struct pppoat_conf_record *r);
 static void conf_record_put_locked(struct pppoat_conf_record *r);
+static void conf_drop_locked(struct pppoat_conf *conf, const char *key);
+static struct pppoat_conf_record *conf_lookup_locked(struct pppoat_conf *conf,
+						     const char         *key);
 
 int pppoat_conf_init(struct pppoat_conf *conf)
 {
@@ -90,12 +93,7 @@ err_free:
 
 static void conf_record_destroy(struct pppoat_conf_record *r)
 {
-	struct pppoat_conf *conf = r->cr_conf;
-
 	PPPOAT_ASSERT(r->cr_ref == 0);
-
-	/* Current function is called under conf->c_lock lock. */
-	pppoat_list_del(&conf->c_store, r);
 
 	pppoat_free(r->cr_key);
 	pppoat_free(r->cr_val);
@@ -113,6 +111,8 @@ int pppoat_conf_store(struct pppoat_conf *conf,
 		return P_ERR(-ENOMEM);
 
 	pppoat_mutex_lock(&conf->c_lock);
+	/* Drop record if exists. */
+	conf_drop_locked(conf, key);
 	pppoat_list_insert(&conf->c_store, r);
 	++conf->c_gen;
 	pppoat_mutex_unlock(&conf->c_lock);
@@ -120,17 +120,42 @@ int pppoat_conf_store(struct pppoat_conf *conf,
 	return 0;
 }
 
-void pppoat_conf_drop(struct pppoat_conf *conf, const char *key)
+static void conf_drop_locked(struct pppoat_conf *conf, const char *key)
 {
 	struct pppoat_conf_record *r;
 
-	r = pppoat_conf_lookup(conf, key);
+	r = conf_lookup_locked(conf, key);
 	if (r != NULL) {
+		pppoat_list_del(&conf->c_store, r);
 		/* Release reference gotten by LOOKUP. */
-		pppoat_conf_record_put(r);
+		conf_record_put_locked(r);
 		/* Release reference gotten by conf_record_new(). */
-		pppoat_conf_record_put(r);
+		conf_record_put_locked(r);
 	}
+}
+
+void pppoat_conf_drop(struct pppoat_conf *conf, const char *key)
+{
+	pppoat_mutex_lock(&conf->c_lock);
+	conf_drop_locked(conf, key);
+	++conf->c_gen;
+	pppoat_mutex_unlock(&conf->c_lock);
+}
+
+static struct pppoat_conf_record *conf_lookup_locked(struct pppoat_conf *conf,
+						     const char         *key)
+{
+	struct pppoat_conf_record *r;
+
+	for (r = pppoat_list_head(&conf->c_store); r != NULL;
+	     r = pppoat_list_next(&conf->c_store, r)) {
+		if (pppoat_streq(key, r->cr_key))
+			break;
+	}
+	if (r != NULL)
+		conf_record_get_locked(r);
+
+	return r;
 }
 
 struct pppoat_conf_record *pppoat_conf_lookup(struct pppoat_conf *conf,
@@ -139,13 +164,7 @@ struct pppoat_conf_record *pppoat_conf_lookup(struct pppoat_conf *conf,
 	struct pppoat_conf_record *r;
 
 	pppoat_mutex_lock(&conf->c_lock);
-	for (r = pppoat_list_head(&conf->c_store); r != NULL;
-	     r = pppoat_list_next(&conf->c_store, r)) {
-		if (strcmp(key, r->cr_key) == 0)
-			break;
-	}
-	if (r != NULL)
-		conf_record_get_locked(r);
+	r = conf_lookup_locked(conf, key);
 	pppoat_mutex_unlock(&conf->c_lock);
 
 	return r;
@@ -230,7 +249,7 @@ int pppoat_conf_find_string_alloc(struct pppoat_conf  *conf,
 	int                        rc;
 
 	r  = pppoat_conf_lookup(conf, key);
-	rc = r == NULL ? P_ERR(-ENOENT) : 0;
+	rc = r == NULL ? -ENOENT : 0;
 	if (rc == 0) {
 		len = strlen(r->cr_val);
 		val = pppoat_alloc(len + 1);
@@ -244,6 +263,26 @@ int pppoat_conf_find_string_alloc(struct pppoat_conf  *conf,
 		*out = val;
 
 	return rc;
+}
+
+void pppoat_conf_find_bool(struct pppoat_conf *conf,
+			   const char         *key,
+			   bool               *out)
+{
+	struct pppoat_conf_record *r;
+
+	r = pppoat_conf_lookup(conf, key);
+	if (r == NULL                        ||
+	    pppoat_streq(r->cr_val, "0")     ||
+	    pppoat_streq(r->cr_val, "false") ||
+	    pppoat_streq(r->cr_val, "False") ||
+	    pppoat_streq(r->cr_val, "FALSE"))
+		*out = false;
+	else
+		*out = true;
+
+	if (r != NULL)
+		pppoat_conf_record_put(r);
 }
 
 /*
@@ -277,14 +316,23 @@ bool pppoat_conf_iter_is_end(struct pppoat_conf_iter *iter)
  * Configuration sources.
  */
 
-int pppoat_conf_read_argv(struct pppoat_conf  *conf,
-			  int                  argc,
-			  const char         **argv)
+int pppoat_conf_read_file(struct pppoat_conf *conf, const char *filename)
 {
 	return 0;
 }
 
-int pppoat_conf_read_file(struct pppoat_conf *conf, const char *filename)
+/*
+ * Functions used in debugging.
+ */
+
+void pppoat_conf_dump(struct pppoat_conf *conf)
 {
-	return 0;
+	struct pppoat_conf_record *r;
+
+	pppoat_mutex_lock(&conf->c_lock);
+	for (r = pppoat_list_head(&conf->c_store); r != NULL;
+	     r = pppoat_list_next(&conf->c_store, r)) {
+		pppoat_info("conf", "%s = %s", r->cr_key, r->cr_val);
+	}
+	pppoat_mutex_unlock(&conf->c_lock);
 }

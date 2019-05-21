@@ -199,6 +199,22 @@ int pppoat_conf_find_string_alloc(struct pppoat_conf  *conf,
 				  char               **out);
 
 /**
+ * Lookup for a boolean record.
+ *
+ * The result is false if either:
+ *  - There is no record with specified key;
+ *  - The value is 0;
+ *  - The value is false, False or FALSE;
+ *
+ * Otherwise, the result is true.
+ *
+ * @note This function doesn't fail.
+ */
+void pppoat_conf_find_bool(struct pppoat_conf *conf,
+			   const char         *key,
+			   bool               *out);
+
+/**
  * Parses argc/argv and stores records to the configuration instance.
  *
  * It supports both predefined options with dash and key/value separated with
@@ -218,7 +234,8 @@ int pppoat_conf_find_string_alloc(struct pppoat_conf  *conf,
  */
 int pppoat_conf_read_argv(struct pppoat_conf  *conf,
 			  int                  argc,
-			  const char         **argv);
+			  char               **argv);
+void pppoat_conf_print_usage(int argc, char **argv);
 
 /**
  * Reads configuration file in INI format and stores its content to the
@@ -266,5 +283,12 @@ void pppoat_conf_iter_fini(struct pppoat_conf_iter *iter);
 const struct pppoat_keyval *
 pppoat_conf_iter_next(struct pppoat_conf_iter *iter);
 bool pppoat_conf_iter_is_end(struct pppoat_conf_iter *iter);
+
+/**
+ * Dump configuration.
+ *
+ * This function is used for testing purpose.
+ */
+void pppoat_conf_dump(struct pppoat_conf *conf);
 
 #endif /* __PPPOAT_CONF_H__ */
