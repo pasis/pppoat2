@@ -26,15 +26,17 @@ struct pppoat_log_driver;
 typedef int (*pppoat_log_driver_init)(struct pppoat_log_driver *,
 				      struct pppoat_conf *);
 typedef void (*pppoat_log_driver_fini)(struct pppoat_log_driver *);
+typedef void (*pppoat_log_driver_flush)(struct pppoat_log_driver *);
 typedef void (*pppoat_log_driver_log)(struct pppoat_log_driver *, const char *);
 
 struct pppoat_log_driver {
-	const char             *ldrv_name;
-	pppoat_log_driver_init  ldrv_init;
-	pppoat_log_driver_fini  ldrv_fini;
-	pppoat_log_driver_log   ldrv_log;
+	const char              *ldrv_name;
+	pppoat_log_driver_init   ldrv_init;
+	pppoat_log_driver_fini   ldrv_fini;
+	pppoat_log_driver_flush  ldrv_flush;
+	pppoat_log_driver_log    ldrv_log;
 	/** Private data, set and used by drivers */
-	void                   *ldrv_priv;
+	void                    *ldrv_priv;
 };
 
 typedef enum {
@@ -49,6 +51,8 @@ int pppoat_log_init(struct pppoat_conf       *conf,
 		    struct pppoat_log_driver *drv,
 		    pppoat_log_level_t        level);
 void pppoat_log_fini(void);
+
+void pppoat_log_flush(void);
 
 void pppoat_log(pppoat_log_level_t level, const char *area,
 		const char *fmt, ...);

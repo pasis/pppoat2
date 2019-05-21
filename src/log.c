@@ -66,9 +66,18 @@ void pppoat_log_fini(void)
 	 * Avoids crashes when someone tries to log during finalisation.
 	 */
 	log_level_min = PPPOAT_LOG_LEVEL_NR;
+	pppoat_log_flush();
 	log_drv = NULL;
 	if (drv->ldrv_fini != NULL)
 		drv->ldrv_fini(drv);
+}
+
+void pppoat_log_flush(void)
+{
+	struct pppoat_log_driver *drv = log_drv;
+
+	if (drv->ldrv_flush != NULL)
+		drv->ldrv_flush(drv);
 }
 
 #define LOG_PREFIX_F "%s %s: "
@@ -123,6 +132,11 @@ exit:
 	va_end(ap);
 }
 
+static void log_driver_stderr_flush(struct pppoat_log_driver *drv)
+{
+	(void)fflush(stderr);
+}
+
 static void log_driver_stderr_log(struct pppoat_log_driver *drv,
 				  const char               *msg)
 {
@@ -130,8 +144,9 @@ static void log_driver_stderr_log(struct pppoat_log_driver *drv,
 }
 
 struct pppoat_log_driver pppoat_log_driver_stderr = {
-	.ldrv_name = "stderr",
-	.ldrv_init = NULL,
-	.ldrv_fini = NULL,
-	.ldrv_log  = log_driver_stderr_log,
+	.ldrv_name  = "stderr",
+	.ldrv_init  = NULL,
+	.ldrv_fini  = NULL,
+	.ldrv_flush = &log_driver_stderr_flush,
+	.ldrv_log   = &log_driver_stderr_log,
 };
