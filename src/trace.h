@@ -62,6 +62,7 @@
 			if (__fmt != NULL) {                                   \
 				pppoat_fatal("trace", __fmt, ## __VA_ARGS__);  \
 			}                                                      \
+			pppoat_log_flush();                                    \
 			abort();                                               \
 		}                                                              \
 	} while (0)
