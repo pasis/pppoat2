@@ -86,7 +86,11 @@ static int tp_udp_ainfo_get(struct addrinfo **ainfo,
 #ifdef AI_ADDRCONFIG
 	hints.ai_flags   |= AI_ADDRCONFIG;
 #endif /* AI_ADDRCONFIG */
+#ifdef __APPLE__
+	hints.ai_family   = AF_INET;
+#else /* __APPLE__ */
 	hints.ai_family   = AF_UNSPEC;
+#endif /* __APPLE__ */
 	hints.ai_protocol = IPPROTO_UDP;
 	hints.ai_socktype = SOCK_DGRAM;
 
