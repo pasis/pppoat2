@@ -209,7 +209,7 @@ int pppoat_conf_find_long(struct pppoat_conf *conf,
 	int                        rc;
 
 	r  = pppoat_conf_lookup(conf, key);
-	rc = r == NULL ? P_ERR(-ENOENT) : 0;
+	rc = r == NULL ? -ENOENT : 0;
 	if (rc == 0) {
 		rc = pppoat_strtol(r->cr_val, out);
 		pppoat_conf_record_put(r);
@@ -227,7 +227,7 @@ int pppoat_conf_find_string(struct pppoat_conf *conf,
 	int                        rc;
 
 	r  = pppoat_conf_lookup(conf, key);
-	rc = r == NULL ? P_ERR(-ENOENT) : 0;
+	rc = r == NULL ? -ENOENT : 0;
 	if (rc == 0) {
 		len = strlen(r->cr_val);
 		if (len >= outlen)
