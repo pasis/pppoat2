@@ -14,7 +14,8 @@ pppoat_common_sources =	\
 	src/misc.c	\
 	src/packet.c	\
 	src/queue.c	\
-	src/sem.c
+	src/sem.c	\
+	src/thread.c
 
 pppoat_common_headers =	\
 	src/conf.h	\
@@ -28,6 +29,7 @@ pppoat_common_headers =	\
 	src/packet.h	\
 	src/queue.h	\
 	src/sem.h	\
+	src/thread.h	\
 	src/trace.h
 
 pppoat_SOURCES =		\

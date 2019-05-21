@@ -37,4 +37,7 @@
 /* conf.c::conf_store_descr */
 #define PPPOAT_CONF_STORE_MAGIC 0xD15CC0DE
 
+/* thread.c::pppoat_thread->t_magic */
+#define PPPOAT_THREAD_MAGIC 0xABBA4EAD
+
 #endif /* __PPPOAT_MAGIC_H__ */
