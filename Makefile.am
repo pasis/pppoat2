@@ -4,6 +4,7 @@ AM_CFLAGS = $(DEBUG_FLAGS) -I$(top_srcdir)/src
 bin_PROGRAMS = pppoat
 
 pppoat_common_sources =	\
+	src/base64.c	\
 	src/conf.c	\
 	src/conf_argv.c	\
 	src/io.c	\
@@ -20,6 +21,7 @@ pppoat_common_sources =	\
 	src/thread.c
 
 pppoat_common_headers =	\
+	src/base64.h	\
 	src/conf.h	\
 	src/io.h	\
 	src/list.h	\
@@ -61,6 +63,7 @@ TESTS = $(check_PROGRAMS)
 
 ut_ut_SOURCES =			\
 	$(pppoat_common_sources)\
+	ut/base64.c		\
 	ut/conf.c		\
 	ut/list.c		\
 	ut/main.c		\
