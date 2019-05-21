@@ -63,7 +63,31 @@ More specific examples:
  * Build a tunnel with TAP interface, configure IPX over it and run old game
    with IPX support such as Warcraft2.
 
+System requirements
+-------------------
+
+PPPoAT supports the following systems:
+
+ * *Unix-like systems* including Linux, BSD systems, MacOS, QNX
+
+The following systems may not be supported out of the box or have low priority:
+
+ * *Android* - needs research, permissions may be an issue for some modules,
+   engine should build and work without issues; middle priority
+ * *Windows with cygwin* - needs research, interface modules may be an issue,
+   engine should build and work without issues; middle priority
+ * *Native Windows* support - not implemented; low priority
+ * *iOS* - not implemented; low priority
+
+PPPoAT is a cross-platform tool. If two different systems support same modules,
+they will work together.
+
+Bugs
+----
+
+Please, report bugs to the issue tracker <https://github.com/pasis/pppoat2/issues>.
+
 Authors
 -------
 
-PPPoAT was written by Dmitry Podgorny.
+PPPoAT was written by Dmitry Podgorny <mailto:pasis.ua@gmail.com>.
