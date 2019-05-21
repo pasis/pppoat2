@@ -20,13 +20,17 @@
 #ifndef __PPPOAT_PPPOAT_H__
 #define __PPPOAT_PPPOAT_H__
 
+struct pppoat_conf;
+struct pppoat_packets;
+struct pppoat_pipeline;
+
 /**
  * PPPoAT instance.
  */
 struct pppoat {
-	/* configuration */
-	/* modules list */
-	int unused;
+	struct pppoat_conf     *p_conf;
+	struct pppoat_packets  *p_pkts;
+	struct pppoat_pipeline *p_pipeline;
 };
 
 #endif /* __PPPOAT_PPPOAT_H__ */

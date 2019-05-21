@@ -37,7 +37,13 @@
 /* conf.c::conf_store_descr */
 #define PPPOAT_CONF_STORE_MAGIC 0xD15CC0DE
 
+/* pipeline.c::pipeline_descr */
+#define PPPOAT_PIPELINE_MAGIC 0x400DF00D
+
 /* thread.c::pppoat_thread->t_magic */
 #define PPPOAT_THREAD_MAGIC 0xABBA4EAD
+
+/* modules/pppd.c::if_pppd_ctx */
+#define PPPOAT_MODULE_IF_PPPD_MAGIC 0xD00DC001
 
 #endif /* __PPPOAT_MAGIC_H__ */
