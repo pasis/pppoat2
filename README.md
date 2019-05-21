@@ -3,9 +3,13 @@ PPPoAT
 
 PPPoAT - PPP over Any Transport.
 
-PPPoAT is a modular tool which creates a point-to-point tunnel over a transport
-and with well-known interfaces. The transports are represented by modules and
-may implement data transfer with any logic.
+PPPoAT is a modular tunneling tool. It creates a point-to-point tunnel over
+a transport. Both transports and tunneling interfaces are represented by
+modules.
+
+PPP in the name refers to the first prototype which supported only PPP
+interface. But now, PPPoAT supports multiple interface types and this list
+can be extended with new interface modules.
 
 Current version is the 3rd iteration with reworked architecture. Previous
 version can be found at <https://github.com/pasis/pppoat>.
@@ -34,11 +38,11 @@ applications can use them without being modified.
 List of the interface modules includes:
 
  * Network interfaces: PPP, TUN/TAP. With TAP interface user can configure
-   network layer protol over it, such as IPX.
+   a network layer protocol over it, such as IPX.
  * File descriptors: connect stdin/stdout, pipes
 
-Intermediate modules
---------------------
+Intermediate modules or plugins
+-------------------------------
 
 PPPoAT introduces intermediate modules that implement such logic as data
 modification, filtering, flow control. Examples are encryption, compression,
@@ -47,7 +51,16 @@ traffic shaping.
 Usecases
 --------
 
- * Build tunnel with TAP interface, configure IPX over it and run old game
+There is a wide range of usecases for PPPoAT. Some abstract examples are:
+
+ * Bypass firewall's restrictions
+ * Hide traffic via a side channel
+ * Connect remote hosts to a local (broadcast) network
+ * Connect hosts without network cards
+
+More specific examples:
+
+ * Build a tunnel with TAP interface, configure IPX over it and run old game
    with IPX support such as Warcraft2.
 
 Authors
