@@ -6,6 +6,7 @@ bin_PROGRAMS = pppoat
 pppoat_common_sources =	\
 	src/conf.c	\
 	src/conf_argv.c	\
+	src/io.c	\
 	src/list.c	\
 	src/mutex.c	\
 	src/log.c	\
@@ -17,6 +18,7 @@ pppoat_common_sources =	\
 
 pppoat_common_headers =	\
 	src/conf.h	\
+	src/io.h	\
 	src/list.h	\
 	src/mutex.h	\
 	src/log.h	\
