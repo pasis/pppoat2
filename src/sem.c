@@ -21,6 +21,30 @@
 
 #include "sem.h"
 
+#ifdef __APPLE__
+
+void pppoat_semaphore_init(struct pppoat_semaphore *sem, unsigned int value)
+{
+	sem->s_sem = dispatch_semaphore_create(value);
+}
+
+void pppoat_semaphore_fini(struct pppoat_semaphore *sem)
+{
+}
+
+void pppoat_semaphore_wait(struct pppoat_semaphore *sem)
+{
+	dispatch_semaphore_wait(sem->s_sem, DISPATCH_TIME_FOREVER);
+}
+
+void pppoat_semaphore_post(struct pppoat_semaphore *sem)
+{
+	dispatch_semaphore_signal(sem->s_sem);
+}
+
+/* -------------------------------------------------------------------------- */
+#else /* __APPLE__ */
+
 void pppoat_semaphore_init(struct pppoat_semaphore *sem, unsigned int value)
 {
 	int rc;
@@ -55,3 +79,5 @@ void pppoat_semaphore_post(struct pppoat_semaphore *sem)
 	rc = sem_post(&sem->s_sem);
 	PPPOAT_ASSERT(rc == 0);
 }
+
+#endif /* __APPLE__ */

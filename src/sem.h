@@ -20,10 +20,18 @@
 #ifndef __PPPOAT_SEMAPHORE_H__
 #define __PPPOAT_SEMAPHORE_H__
 
-#include <semaphore.h>	/* sem_t */
+#ifdef __APPLE__
+#include <dispatch/dispatch.h>	/* dispatch_semaphore_t */
+#else
+#include <semaphore.h>		/* sem_t */
+#endif
 
 struct pppoat_semaphore {
+#ifdef __APPLE__
+	dispatch_semaphore_t s_sem;
+#else
 	sem_t s_sem;
+#endif
 };
 
 void pppoat_semaphore_init(struct pppoat_semaphore *sem, unsigned int value);
