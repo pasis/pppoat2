@@ -108,6 +108,8 @@ void pppoat_fini(struct pppoat *ctx)
 }
 
 extern struct pppoat_module_impl pppoat_module_if_pppd;
+extern struct pppoat_module_impl pppoat_module_if_tun;
+extern struct pppoat_module_impl pppoat_module_if_tap;
 extern struct pppoat_module_impl pppoat_module_tp_udp;
 
 static void pppoat_sighandler(int signo)
@@ -138,8 +140,8 @@ int main(int argc, char **argv)
 	pppoat_info("pppoat", "on the hosts you want to connect (replace port number and addresses");
 	pppoat_info("pppoat", "with proper values, -s must be passed on a single host).");
 	pppoat_info("pppoat", "");
-	pppoat_info("pppoat", "  pppoat -s pppd.port=5000 pppd.host=192.168.1.2");
-	pppoat_info("pppoat", "  pppoat pppd.port=5000 pppd.host=192.168.1.1");
+	pppoat_info("pppoat", "  pppoat -s udp.port=5000 udp.host=192.168.1.2");
+	pppoat_info("pppoat", "  pppoat udp.port=5000 udp.host=192.168.1.1");
 	pppoat_info("pppoat", "");
 
 	pppoat_semaphore_init(&exit_sem, 0);
