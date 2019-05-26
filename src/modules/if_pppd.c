@@ -134,6 +134,7 @@ static void if_pppd_fini(struct pppoat_module *mod)
 
 	PPPOAT_ASSERT(if_pppd_ctx_invariant(ctx));
 
+	pppoat_thread_fini(&ctx->ipc_thread);
 	pppoat_free(ctx->ipc_ip);
 	pppoat_free(ctx);
 	mod->m_userdata = NULL;
