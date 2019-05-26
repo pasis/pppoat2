@@ -66,13 +66,6 @@ static bool tp_udp_ctx_invariant(struct tp_udp_ctx *ctx)
 	return ctx != NULL;
 }
 
-static bool tp_udp_error_is_recoverable(int error)
-{
-	return (error == -EAGAIN ||
-		error == -EINTR  ||
-		error == -EWOULDBLOCK);
-}
-
 static int tp_udp_ainfo_get(struct addrinfo **ainfo,
 			    const char       *host,
 			    unsigned short    port)
@@ -235,12 +228,11 @@ static void tp_udp_worker(struct pppoat_thread *thread)
 			PPPOAT_ASSERT(buf != NULL); /* XXX */
 			/* XXX use recvfrom() */
 			rlen = recv(sock, buf, size, 0);
-			if (rlen < 0 && !tp_udp_error_is_recoverable(-errno))
+			if (rlen < 0 && !pppoat_io_error_is_recoverable(-errno))
 				rc = P_ERR(-errno);
 			if (rlen > 0) {
 				pkt = pppoat_packet_get(pkts);
 				PPPOAT_ASSERT(pkt != NULL); /* XXX */
-				PPPOAT_ASSERT(pkt->pkt_type == PPPOAT_PACKET_UNKNOWN);
 				pkt->pkt_data = buf;
 				pkt->pkt_size = rlen;
 				pkt->pkt_ops = &pppoat_packet_ops_std;
@@ -288,9 +280,9 @@ static int tp_udp_buf_send(int              sock,
 			      ainfo->ai_addrlen);
 		if (slen < 0 && errno == EINTR)
 			continue;
-		if (slen < 0 && !tp_udp_error_is_recoverable(-errno))
+		if (slen < 0 && !pppoat_io_error_is_recoverable(-errno))
 			rc = P_ERR(-errno);
-		if (slen < 0 && tp_udp_error_is_recoverable(-errno))
+		if (slen < 0 && pppoat_io_error_is_recoverable(-errno))
 			rc = pppoat_io_select_single_write(sock);
 		if (slen > 0) {
 			buf += slen;

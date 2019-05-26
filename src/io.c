@@ -27,7 +27,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 
-static bool io_error_is_recoverable(int error)
+bool pppoat_io_error_is_recoverable(int error)
 {
 	return error == -EWOULDBLOCK ||
 	       error == -EINTR       ||
@@ -85,7 +85,7 @@ int pppoat_io_write_sync(int fd, const void *buf, size_t len)
 		/* TODO Log unrecoverable I/O errors. */
 		if (rc == -EINTR)
 			continue;
-		if (rc != 0 && io_error_is_recoverable(rc))
+		if (rc != 0 && pppoat_io_error_is_recoverable(rc))
 			rc = pppoat_io_select_single_write(fd);
 		if (wlen > 0) {
 			buf   = (char *)buf + wlen;
