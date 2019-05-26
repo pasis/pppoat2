@@ -132,6 +132,31 @@ exit:
 	va_end(ap);
 }
 
+static char log_hex_tbl[16] = {
+	'0', '1', '2', '3', '4', '5', '6', '7',
+	'8', '9', 'A', 'B', 'C', 'D', 'E', 'F'
+};
+
+void pppoat_log_hexdump(void *buf, size_t len)
+{
+	char          *hex;
+	unsigned char  c;
+	size_t         i;
+
+	hex = pppoat_alloc(len * 3);
+	if (hex == NULL)
+		return;
+
+	for (i = 0; i < len; ++i) {
+		c = ((unsigned char *)buf)[i];
+		hex[i * 3]     = log_hex_tbl[c >> 4];
+		hex[i * 3 + 1] = log_hex_tbl[c & 0x0f];
+		hex[i * 3 + 2] = i < len - 1 ? ' ' : '\0';
+	}
+	pppoat_debug("hex", "%s", hex);
+	pppoat_free(hex);
+}
+
 static void log_driver_stderr_flush(struct pppoat_log_driver *drv)
 {
 	(void)fflush(stderr);

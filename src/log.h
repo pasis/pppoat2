@@ -20,6 +20,8 @@
 #ifndef __PPPOAT_LOG_H__
 #define __PPPOAT_LOG_H__
 
+#include <stddef.h>	/* size_t */
+
 struct pppoat_conf;
 struct pppoat_log_driver;
 
@@ -56,6 +58,13 @@ void pppoat_log_flush(void);
 
 void pppoat_log(pppoat_log_level_t level, const char *area,
 		const char *fmt, ...);
+
+/**
+ * Log a buffer as a string of hexadecimal numbers.
+ *
+ * @note Buffer is logged with PPPOAT_DEBUG level.
+ */
+void pppoat_log_hexdump(void *buf, size_t len);
 
 #ifdef NDEBUG
 #define pppoat_debug(area, fmt, ...) do {} while (0)
