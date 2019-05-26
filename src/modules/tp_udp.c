@@ -165,29 +165,40 @@ static int tp_udp_init(struct pppoat_module *mod, struct pppoat_conf *conf)
 	int                rc;
 
 	ctx = pppoat_alloc(sizeof *ctx);
-	rc  = ctx == NULL ? P_ERR(-ENOMEM) : 0;
-	rc  = rc ?: tp_udp_conf_parse(ctx, conf);
-	if (rc == 0) {
-		rc = tp_udp_ainfo_get(&ctx->uc_ainfo, ctx->uc_dhost,
-				      ctx->uc_dport);
-		rc = rc ?: tp_udp_sock_new(ctx->uc_sport, &ctx->uc_sock);
-		rc = rc ?: pppoat_io_fd_blocking_set(ctx->uc_sock, false);
-		if (rc != 0) {
-			if (ctx->uc_ainfo != NULL)
-				tp_udp_ainfo_put(ctx->uc_ainfo);
-			pppoat_free(ctx);
-		}
-	}
-	if (rc == 0) {
-		ctx->uc_module = mod;
-		mod->m_userdata = ctx;
-	}
+	if (ctx == NULL)
+		return P_ERR(-ENOMEM);
+	rc = tp_udp_conf_parse(ctx, conf);
+	if (rc != 0)
+		goto err_ctx_free;
 
-	if (rc == 0) {
-		rc = pppoat_thread_init(&ctx->uc_thread, &tp_udp_worker);
-		PPPOAT_ASSERT(rc == 0); /* XXX */
-		ctx->uc_thread.t_userdata = ctx;
-	}
+	rc = tp_udp_ainfo_get(&ctx->uc_ainfo, ctx->uc_dhost, ctx->uc_dport);
+	if (rc != 0)
+		goto err_conf_fini;
+
+	rc = tp_udp_sock_new(ctx->uc_sport, &ctx->uc_sock);
+	if (rc != 0)
+		goto err_ainfo_put;
+
+	(void)pppoat_io_fd_blocking_set(ctx->uc_sock, false);
+
+	rc = pppoat_thread_init(&ctx->uc_thread, &tp_udp_worker);
+	if (rc != 0)
+		goto err_sock_close;
+
+	ctx->uc_module = mod;
+	ctx->uc_thread.t_userdata = ctx;
+	mod->m_userdata = ctx;
+
+	return 0;
+
+err_sock_close:
+	(void)close(ctx->uc_sock);
+err_ainfo_put:
+	tp_udp_ainfo_put(ctx->uc_ainfo);
+err_conf_fini:
+	tp_udp_conf_fini(ctx);
+err_ctx_free:
+	pppoat_free(ctx);
 	return rc;
 }
 
@@ -256,7 +267,6 @@ static int tp_udp_run(struct pppoat_module *mod)
 	PPPOAT_ASSERT(tp_udp_ctx_invariant(ctx));
 
 	rc = pppoat_thread_start(&ctx->uc_thread);
-	PPPOAT_ASSERT(rc == 0); /* XXX */
 
 	return rc;
 }
