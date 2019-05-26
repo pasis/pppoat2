@@ -248,7 +248,6 @@ struct pppoat_module_impl pppoat_module_if_tap = {
 #include <sys/kern_control.h>	/* sockaddr_ctl, ctl_info */
 #include <sys/socket.h>		/* socket */
 #include <sys/sys_domain.h>	/* SYSPROTO_CONTROL, AF_SYS_CONTROL */
-#include <fcntl.h>		/* O_RDWR */
 
 static int if_tuntap_fd_init(struct if_tuntap_ctx *ctx,
 			     struct pppoat_conf   *conf,
