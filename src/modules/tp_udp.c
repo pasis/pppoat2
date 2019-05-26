@@ -220,7 +220,6 @@ static void tp_udp_worker(struct pppoat_thread *thread)
 	struct pppoat_packets  *pkts;
 	struct pppoat_pipeline *pipeline;
 	struct pppoat_packet   *pkt;
-	void                   *buf;
 	size_t                  size;
 	ssize_t                 rlen;
 	int                     sock;
@@ -232,31 +231,28 @@ static void tp_udp_worker(struct pppoat_thread *thread)
 	pkts = ctx->uc_module->m_pkts;
 	sock = ctx->uc_sock;
 	size = TP_UDP_MTU;
-	while (rc == 0) {
+	pkt  = pppoat_packet_get(pkts, size);
+	while (rc == 0 && pkt != NULL) {
 		rc = pppoat_io_select_single_read(sock);
-		if (rc == 0) {
-			buf = pppoat_alloc(size);
-			PPPOAT_ASSERT(buf != NULL); /* XXX */
-			/* XXX use recvfrom() */
-			rlen = recv(sock, buf, size, 0);
-			if (rlen < 0 && !pppoat_io_error_is_recoverable(-errno))
-				rc = P_ERR(-errno);
-			if (rlen > 0) {
-				pkt = pppoat_packet_get(pkts);
-				PPPOAT_ASSERT(pkt != NULL); /* XXX */
-				pkt->pkt_data = buf;
-				pkt->pkt_size = rlen;
-				pkt->pkt_ops = &pppoat_packet_ops_std;
-				pppoat_debug("udp", "Recv pkt size=%zu", pkt->pkt_size);
-				rc = pppoat_pipeline_packet_recv(pipeline,
-							ctx->uc_module, pkt);
-				if (rc != 0)
-					pppoat_packet_put(pkts, pkt);
-			} else
-				pppoat_free(buf);
+		if (rc != 0)
+			break;
+
+		/* XXX use recvfrom() */
+		rlen = recv(sock, pkt->pkt_data, pkt->pkt_size, 0);
+		if (rlen < 0 && !pppoat_io_error_is_recoverable(-errno))
+			rc = P_ERR(-errno);
+		if (rlen > 0) {
+			pkt->pkt_size = rlen;
+			rc = pppoat_pipeline_packet_recv(pipeline,
+							 ctx->uc_module, pkt);
+			if (rc != 0)
+				pppoat_packet_put(pkts, pkt);
+			pkt = pppoat_packet_get(pkts, size);
 		}
 	}
-	pppoat_debug("udp", "Worker thread finished.");
+	if (pkt != NULL)
+		pppoat_packet_put(pkts, pkt);
+	pppoat_debug("udp", "Worker thread finished. rc=%d pkt=%p", rc, pkt);
 }
 
 static int tp_udp_run(struct pppoat_module *mod)
@@ -311,15 +307,12 @@ static int tp_udp_recv(struct pppoat_module *mod, struct pppoat_packet *pkt)
 	PPPOAT_ASSERT(tp_udp_ctx_invariant(ctx));
 	PPPOAT_ASSERT(pkt->pkt_type == PPPOAT_PACKET_SEND);
 
-	pppoat_debug("udp", "Send pkt size=%zu", pkt->pkt_size);
-
 	rc = tp_udp_buf_send(ctx->uc_sock, ctx->uc_ainfo, pkt->pkt_data,
 			     pkt->pkt_size);
-	PPPOAT_ASSERT(rc == 0); /* XXX */
+	if (rc == 0)
+		pppoat_packet_put(mod->m_pkts, pkt);
 
-	pppoat_packet_put(mod->m_pkts, pkt);
-
-	return 0;
+	return rc;
 }
 
 static size_t tp_udp_mtu(struct pppoat_module *mod)

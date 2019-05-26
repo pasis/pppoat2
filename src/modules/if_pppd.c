@@ -146,37 +146,38 @@ static void if_pppd_worker(struct pppoat_thread *thread)
 	struct pppoat_packets  *pkts;
 	struct pppoat_pipeline *pipeline;
 	struct pppoat_packet   *pkt;
-	void                   *buf;
 	size_t                  size;
 	ssize_t                 rlen;
 	int                     fd;
-	int                     rc;
+	int                     rc = 0;
 
 	PPPOAT_ASSERT(if_pppd_ctx_invariant(ctx));
 
-	pkts = ctx->ipc_module->m_pkts;
 	pipeline = ctx->ipc_module->m_pipeline;
-	fd = ctx->ipc_rd;
+	pkts = ctx->ipc_module->m_pkts;
+	fd   = ctx->ipc_rd;
 	size = IF_PPPD_MTU;
-	while (true) {
-		buf = pppoat_alloc(size);
-		PPPOAT_ASSERT(buf != NULL); /* XXX */
+	pkt  = pppoat_packet_get(pkts, size);
+	while (rc == 0 && pkt != NULL) {
 		rc = pppoat_io_select_single_read(fd);
-		PPPOAT_ASSERT(rc == 0); /* XXX */
-		rlen = read(fd, buf, size);
-		PPPOAT_ASSERT(rlen > 0); /* XXX */
-		pkt = pppoat_packet_get(pkts);
-		PPPOAT_ASSERT(pkt != NULL); /* XXX */
-		pkt->pkt_data = buf;
-		pkt->pkt_size = rlen;
-		pkt->pkt_ops = &pppoat_packet_ops_std;
-		pppoat_debug("pppd", "%p Send pkt size=%zu",
-			     ctx->ipc_module, pkt->pkt_size);
-		rc = pppoat_pipeline_packet_send(pipeline, ctx->ipc_module,
-						 pkt);
 		if (rc != 0)
-			pppoat_packet_put(pkts, pkt);
+			break;
+
+		rlen = read(fd, pkt->pkt_data, pkt->pkt_size);
+		if (rlen < 0 && !pppoat_io_error_is_recoverable(-errno))
+			rc = P_ERR(-errno);
+		if (rlen > 0) {
+			pkt->pkt_size = rlen;
+			rc = pppoat_pipeline_packet_send(pipeline,
+							 ctx->ipc_module, pkt);
+			if (rc != 0)
+				pppoat_packet_put(pkts, pkt);
+			pkt  = pppoat_packet_get(pkts, size);
+		}
 	}
+	if (pkt != NULL)
+		pppoat_packet_put(pkts, pkt);
+	pppoat_debug("pppd", "Worker thread finished. rc=%d pkt=%p", rc, pkt);
 }
 
 static int if_pppd_run(struct pppoat_module *mod)
@@ -264,14 +265,11 @@ static int if_pppd_recv(struct pppoat_module *mod, struct pppoat_packet *pkt)
 
 	PPPOAT_ASSERT(if_pppd_ctx_invariant(ctx));
 
-	pppoat_debug("pppd", "%p Recv pkt size=%zu", mod, pkt->pkt_size);
-
 	rc = pppoat_io_write_sync(ctx->ipc_wr, pkt->pkt_data, pkt->pkt_size);
-	PPPOAT_ASSERT(rc == 0); /* XXX */
+	if (rc == 0)
+		pppoat_packet_put(mod->m_pkts, pkt);
 
-	pppoat_packet_put(mod->m_pkts, pkt);
-
-	return 0;
+	return rc;
 }
 
 static size_t if_pppd_mtu(struct pppoat_module *mod)

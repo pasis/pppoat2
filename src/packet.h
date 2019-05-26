@@ -27,6 +27,7 @@ struct pppoat_packet;
 
 struct pppoat_packets {
 	struct pppoat_list  pks_cache;
+	struct pppoat_list  pks_cache_empty;
 	struct pppoat_mutex pks_lock;
 };
 
@@ -42,8 +43,9 @@ struct pppoat_packet_ops {
 
 struct pppoat_packet {
 	enum pppoat_packet_type   pkt_type;
-	size_t                    pkt_size;
 	void                     *pkt_data;
+	size_t                    pkt_size;
+	size_t                    pkt_size_actual;
 	struct pppoat_packet_ops *pkt_ops;
 	/** Link for queue/pipeline. */
 	struct pppoat_list_link   pkt_q_link;
@@ -60,14 +62,25 @@ int pppoat_packets_init(struct pppoat_packets *pkts);
 void pppoat_packets_fini(struct pppoat_packets *pkts);
 
 /**
- * Returns an allocated empty packet.
+ * Returns an allocated packet with allocated data buffer.
  *
- * This get/put interface implements a cache of allocated empty packets. When
+ * This get/put interface implements a cache of allocated packets. When
  * the cache is empty, get() allocates and returns new packet.
+ *
+ * The data buffer is at least `size' bytes. However, user may not access
+ * memory over this size.
  *
  * @return Pointer to an empty packet object or NULL on memory allocation error.
  */
-struct pppoat_packet *pppoat_packet_get(struct pppoat_packets *pkts);
+struct pppoat_packet *pppoat_packet_get(struct pppoat_packets *pkts,
+					size_t                 size);
+
+/**
+ * Returns an allocated empty packet.
+ *
+ * @return Pointer to an empty packet object or NULL on memory allocation error.
+ */
+struct pppoat_packet *pppoat_packet_get_empty(struct pppoat_packets *pkts);
 
 /**
  * Marks the packet object as unused.
