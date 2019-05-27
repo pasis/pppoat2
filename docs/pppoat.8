@@ -1,6 +1,6 @@
-.TH PPPOAT 8 "2018-11-02" "PPP over Any Transport"
+.TH PPPOAT 8 "2019-05-28" "PPP over Any Transport"
 .SH NAME
-PPPoAT \- a modular tool for building PtP tunnels.
+PPPoAT \- a modular tool for building point-to-point tunnels.
 .SH SYNOPSIS
 .B pppoat
 [OPTION]... [CONF]...
@@ -9,9 +9,35 @@ PPPoAT builds a tunnel over various transports and provides well-known
 interfaces for applications. Main purpose of the tool is to connect two
 hosts when it is not possible in usual ways.
 .SH OPTIONS
-TBD
+.TP
+.BI "\-h, \-\-help"
+Show help.
+.TP
+.BI "\-c, \-\-config="FILE
+Read configuration from the file.
+.TP
+.BI "\-i, \-\-interface="NAME
+Use interface module with the specified name.
+.TP
+.BI "\-t, \-\-transport="NAME
+Use transport module with the specified name.
+.TP
+.BI "\-s, \-\-server"
+Some transport or interface modules work with client-server model.
+This option must be set on the server side.
+.TP
+.BI "\-v, \-\-verbose"
+Print debug messages.
 .SH CONFIGURATION
-TBD
+Configuration is a list of key-values separated by '='.
+Each module may have own specific configuration.
+Please, refer to the module specific documentation or examples.
+
+Configuration files have INI format.
+.SH EXAMPLES
+pppoat -i tun -t udp udp.host=10.0.2.2 udp.port=5000
+.SH BUGS
+Please, report bugs to the GitHub issue tracker: <https://github.com/pasis/pppoat2/issues>
 .SH AUTHOR
 Written by Dmitry Podgorny <pasis.ua@gmail.com>.
 .SH COPYRIGHT
