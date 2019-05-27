@@ -1,0 +1,12 @@
+language: c
+install:
+    - sudo apt-get -y install clang autoconf-archive libtool
+before_script:
+    - ./autogen.sh
+script:
+    - ./configure ${CONFIGURE_OPT} && make && make check
+env:
+    - CONFIGURE_OPT=""
+    - CONFIGURE_OPT="CC=clang"
+matrix:
+    fast_finish: true
