@@ -372,6 +372,7 @@ static void if_tun_compat_layer(struct if_tuntap_ctx *ctx,
 /* -------------------------------------------------------------------------- */
 #else /* __APPLE__ */
 
+#include <sys/socket.h>		/* sockaddr required for linux/if.h */
 #include <linux/if.h>		/* ifreq */
 #include <linux/if_tun.h>	/* TUNSETIFF */
 #include <sys/ioctl.h>		/* ioctl */
