@@ -106,17 +106,16 @@ void pppoat_conf_print_usage(int argc, char **argv)
 	if (argc > 0)
 		prog = argv[0];
 
-	printf("%s [OPTIONS] [CONFIGURATION]\n\n", prog);
-	printf("OPTIONS:\n");
+	printf("Usage: %s [OPTION]... [CONF]...\n\n", prog);
+	printf("OPTIONS\n");
 	for (i = 0; i < ARRAY_SIZE(conf_argv_opts); ++i) {
-		printf("  --%s", conf_argv_opts[i].cao_opt_long);
+		if (conf_argv_opts[i].cao_opt_short != 0)
+			printf("  -%c, ", conf_argv_opts[i].cao_opt_short);
+		else
+			printf("       ");
+		printf("--%s", conf_argv_opts[i].cao_opt_long);
 		if (conf_argv_opts[i].cao_argument)
 			printf("=<VALUE>");
-		if (conf_argv_opts[i].cao_opt_short != 0) {
-			printf(", -%c", conf_argv_opts[i].cao_opt_short);
-			if (conf_argv_opts[i].cao_argument)
-				printf(" <VALUE>");
-		}
 		printf("\t");
 		if (!conf_argv_opts[i].cao_argument)
 			printf("\t\t");
@@ -124,7 +123,10 @@ void pppoat_conf_print_usage(int argc, char **argv)
 		printf("\n");
 	}
 	printf("\n");
-	printf("CONFIGURATION is a list of key-values separated by '='.\n");
+	printf("CONFIGURATION\n");
+	printf("  Configuration is a list of key-values separated by '='. "
+	       "Each module may have own specific configuration. "
+	       "Please, refer to the module specific documentation or examples.\n");
 }
 
 static int conf_argv_store_single(struct pppoat_conf *conf,
