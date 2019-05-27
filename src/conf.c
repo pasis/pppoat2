@@ -313,15 +313,6 @@ bool pppoat_conf_iter_is_end(struct pppoat_conf_iter *iter)
 }
 
 /*
- * Configuration sources.
- */
-
-int pppoat_conf_read_file(struct pppoat_conf *conf, const char *filename)
-{
-	return 0;
-}
-
-/*
  * Functions used in debugging.
  */
 

@@ -7,6 +7,7 @@ pppoat_common_sources =	\
 	src/base64.c	\
 	src/conf.c	\
 	src/conf_argv.c	\
+	src/conf_file.c	\
 	src/io.c	\
 	src/list.c	\
 	src/log.c	\

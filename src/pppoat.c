@@ -127,6 +127,7 @@ int main(int argc, char **argv)
 	struct pppoat        *ctx;
 	struct pppoat_module *mod;
 	struct pppoat_module *mod2;
+	char                 *file;
 	bool                  help;
 	bool                  server;
 	int                   rc;
@@ -155,22 +156,48 @@ int main(int argc, char **argv)
 	rc = pppoat_init(ctx);
 	PPPOAT_ASSERT(rc == 0);
 
+	/*
+	 * Read configuration from all sources.
+	 */
+
 	rc = pppoat_conf_read_argv(ctx->p_conf, argc, argv);
 	PPPOAT_ASSERT(rc == 0);
 
+	rc = pppoat_conf_find_string_alloc(ctx->p_conf, "config", &file);
+	if (rc < 0 && rc != -ENOENT)
+		goto exit;
+	if (rc == 0) {
+		rc = pppoat_conf_read_file(ctx->p_conf, file);
+		pppoat_free(file);
+		if (rc != 0) {
+			pppoat_error("pppoat", "Couldn't read file, rc=%d", rc);
+			goto exit;
+		}
+	}
+
+	pppoat_conf_dump(ctx->p_conf);
+
+	/*
+	 * Print help if user asks.
+	 */
+
 	pppoat_conf_find_bool(ctx->p_conf, "help", &help);
-	pppoat_conf_find_bool(ctx->p_conf, "server", &server);
 	if (help) {
 		pppoat_conf_print_usage(argc, argv);
 		goto exit;
 	}
+
+	/*
+	 * XXX Check hardcoded modules pipeline.
+	 */
+
+	pppoat_conf_find_bool(ctx->p_conf, "server", &server);
 	if (server) {
 		/* XXX Use default internal IPs with -s option. */
 		rc = pppoat_conf_store(ctx->p_conf, "pppd.ip", "10.0.0.1:10.0.0.2");
 		PPPOAT_ASSERT(rc == 0);
 	}
 
-	/* XXX Test if_pppd module. */
 	mod = pppoat_alloc(sizeof *mod);
 	PPPOAT_ASSERT(mod != NULL);
 	mod2 = pppoat_alloc(sizeof *mod2);
@@ -187,7 +214,15 @@ int main(int argc, char **argv)
 	PPPOAT_ASSERT(rc == 0);
 	pppoat_pipeline_ready(ctx->p_pipeline, true);
 
+	/*
+	 * Wait for signal.
+	 */
+
 	pppoat_semaphore_wait(&exit_sem);
+
+	/*
+	 * Finalisation.
+	 */
 
 	pppoat_pipeline_ready(ctx->p_pipeline, false);
 	pppoat_module_stop(mod);

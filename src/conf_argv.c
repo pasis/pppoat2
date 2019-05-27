@@ -37,10 +37,11 @@ struct conf_argv_option {
 
 static const struct conf_argv_option conf_argv_opts[] = {
 	{ "help",	'h', false, "Print help message" },
-	{ "verbose",	'v', false, "Print debug messages" },
+	{ "config",	'c', true,  "Read configuration from the file" },
 	{ "interface",	'i', true,  "Interface module" },
 	{ "transport",	't', true,  "Transport module" },
 	{ "server",	's', false, "Server side" },
+	{ "verbose",	'v', false, "Print debug messages" },
 };
 
 static char *conf_optstring(void)
@@ -131,7 +132,6 @@ static int conf_argv_store_single(struct pppoat_conf *conf,
 				  const char         *val,
 				  bool                option)
 {
-	pppoat_debug("conf", "Commandline option: %s = %s", key, val);
 	return pppoat_conf_store(conf, key, val);
 }
 
