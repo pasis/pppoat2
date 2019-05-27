@@ -42,19 +42,19 @@ struct pppoat_packet_ops {
 };
 
 struct pppoat_packet {
-	enum pppoat_packet_type   pkt_type;
-	void                     *pkt_data;
-	size_t                    pkt_size;
-	size_t                    pkt_size_actual;
-	struct pppoat_packet_ops *pkt_ops;
+	enum pppoat_packet_type         pkt_type;
+	void                           *pkt_data;
+	size_t                          pkt_size;
+	size_t                          pkt_size_actual;
+	const struct pppoat_packet_ops *pkt_ops;
 	/** Link for queue/pipeline. */
-	struct pppoat_list_link   pkt_q_link;
-	uint32_t                  pkt_q_magic;
+	struct pppoat_list_link         pkt_q_link;
+	uint32_t                        pkt_q_magic;
 	/** Link for cache. */
-	struct pppoat_list_link   pkt_cache_link;
-	uint32_t                  pkt_cache_magic;
+	struct pppoat_list_link         pkt_cache_link;
+	uint32_t                        pkt_cache_magic;
 	/** Private userdata. */
-	void                     *pkt_userdata;
+	void                           *pkt_userdata;
 };
 
 /** Initialises packet subsystem. */
@@ -90,6 +90,6 @@ struct pppoat_packet *pppoat_packet_get_empty(struct pppoat_packets *pkts);
  */
 void pppoat_packet_put(struct pppoat_packets *pkts, struct pppoat_packet *pkt);
 
-extern struct pppoat_packet_ops pppoat_packet_ops_std;
+extern const struct pppoat_packet_ops pppoat_packet_ops_std;
 
 #endif /* __PPPOAT_PACKET_H__ */

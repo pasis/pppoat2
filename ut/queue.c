@@ -41,9 +41,9 @@ static void ut_queue_simple(void)
 	PPPOAT_ASSERT(rc == 0);
 	rc = pppoat_queue_init(q);
 	PPPOAT_ASSERT(rc == 0);
-	pkt1 = pppoat_packet_get(pkts);
+	pkt1 = pppoat_packet_get_empty(pkts);
 	PPPOAT_ASSERT(pkt1 != NULL);
-	pkt2 = pppoat_packet_get(pkts);
+	pkt2 = pppoat_packet_get_empty(pkts);
 	PPPOAT_ASSERT(pkt2 != NULL);
 
 	/* Empty queue. */

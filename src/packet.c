@@ -76,7 +76,7 @@ static void packet_init(struct pppoat_packet *pkt)
 
 static void packet_fini(struct pppoat_packet *pkt)
 {
-	struct pppoat_packet_ops *ops = pkt->pkt_ops;
+	const struct pppoat_packet_ops *ops = pkt->pkt_ops;
 
 	if (ops != NULL && ops->pko_free != NULL)
 		ops->pko_free(pkt);
@@ -155,6 +155,7 @@ void pppoat_packet_put(struct pppoat_packets *pkts, struct pppoat_packet *pkt)
 	} else {
 		pkt->pkt_type = PPPOAT_PACKET_UNKNOWN;
 		pkt->pkt_size = pkt->pkt_size_actual;
+		pkt->pkt_userdata = NULL;
 	}
 	PPPOAT_ASSERT(imply(pkt->pkt_size_actual == 0, pkt->pkt_data == NULL));
 
@@ -173,6 +174,6 @@ static void packet_ops_std_free(struct pppoat_packet *pkt)
 	pkt->pkt_size = 0;
 }
 
-struct pppoat_packet_ops pppoat_packet_ops_std = {
+const struct pppoat_packet_ops pppoat_packet_ops_std = {
 	.pko_free = &packet_ops_std_free,
 };
