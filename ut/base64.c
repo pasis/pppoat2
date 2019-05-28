@@ -33,9 +33,9 @@
  */
 
 struct ut_base64_test {
-	void   *ubt_raw;
-	size_t  ubt_raw_len;
-	char   *ubt_base64;
+	const void *ubt_raw;
+	size_t      ubt_raw_len;
+	const char *ubt_base64;
 };
 
 static const struct ut_base64_test ut_base64_rfc4648_vector[] = {
@@ -76,6 +76,40 @@ static const struct ut_base64_test ut_base64_rfc4648_vector[] = {
 	},
 };
 
+static const struct ut_base64_test ut_base64_strings_vector[] = {
+	{
+		.ubt_raw     = "Some long message with only printable letters",
+		.ubt_raw_len = 45,
+		.ubt_base64  = "U29tZSBsb25nIG1lc3NhZ2Ugd2l0aC"
+			       "Bvbmx5IHByaW50YWJsZSBsZXR0ZXJz",
+	},
+};
+
+/* 15-byte array or zeros. */
+static const char ut_base64_zero[] = {
+	0x00, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x00,
+};
+
+static const struct ut_base64_test ut_base64_binary_vector[] = {
+	{
+		.ubt_raw     = ut_base64_zero,
+		.ubt_raw_len = 15,
+		.ubt_base64  = "AAAAAAAAAAAAAAAAAAAA",
+	},
+	{
+		.ubt_raw     = ut_base64_zero,
+		.ubt_raw_len = 14,
+		.ubt_base64  = "AAAAAAAAAAAAAAAAAAA=",
+	},
+	{
+		.ubt_raw     = ut_base64_zero,
+		.ubt_raw_len = 13,
+		.ubt_base64  = "AAAAAAAAAAAAAAAAAA==",
+	},
+};
+
 static void ut_base64_run_vector(const struct ut_base64_test *vec, size_t nr)
 {
 	unsigned char *raw;
@@ -111,10 +145,24 @@ static void ut_base64_rfc4648(void)
 			     ARRAY_SIZE(ut_base64_rfc4648_vector));
 }
 
+static void ut_base64_strings(void)
+{
+	ut_base64_run_vector(ut_base64_strings_vector,
+			     ARRAY_SIZE(ut_base64_strings_vector));
+}
+
+static void ut_base64_binary(void)
+{
+	ut_base64_run_vector(ut_base64_binary_vector,
+			     ARRAY_SIZE(ut_base64_binary_vector));
+}
+
 struct pppoat_ut_group pppoat_tests_base64 = {
 	.ug_name = "base64",
 	.ug_tests = {
 		PPPOAT_UT_TEST("RFC4648", ut_base64_rfc4648),
+		PPPOAT_UT_TEST("strings", ut_base64_strings),
+		PPPOAT_UT_TEST("binary", ut_base64_binary),
 		PPPOAT_UT_TEST_END,
 	},
 };
