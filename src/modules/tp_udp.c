@@ -146,10 +146,14 @@ static int tp_udp_conf_parse(struct tp_udp_ctx *ctx, struct pppoat_conf *conf)
 	if (rc == 0)
 		ctx->uc_dport = (unsigned short)port;
 
-	PPPOAT_ASSERT(ctx->uc_sport != 0 && ctx->uc_dport != 0); /* XXX */
+	if (ctx->uc_sport == 0 || ctx->uc_dport == 0) {
+		pppoat_error("udp", "Source or destination port is not set.");
+		return P_ERR(-ENOENT);
+	}
 
 	rc = pppoat_conf_find_string_alloc(conf, UDP_CONF_HOST, &ctx->uc_dhost);
-	PPPOAT_ASSERT(rc == 0); /* XXX */
+	if (rc == -ENOENT)
+		pppoat_error("udp", "Remote host address is not set.");
 
 	return rc;
 }
