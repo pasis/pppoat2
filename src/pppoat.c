@@ -146,9 +146,12 @@ int main(int argc, char **argv)
 	pppoat_info("pppoat", "");
 
 	pppoat_semaphore_init(&exit_sem, 0);
-	rc = sigaction(SIGTERM, &act, NULL);
-	rc = rc ?: sigaction(SIGINT, &act, NULL);
+
+	rc = sigaction(SIGTERM, &act, NULL)
+	  ?: sigaction(SIGINT, &act, NULL);
 	rc = rc == 0 ? 0 : P_ERR(-errno);
+	if (signal(SIGPIPE, SIG_IGN) == SIG_ERR)
+		rc = rc ?: P_ERR(-errno);
 	PPPOAT_ASSERT(rc == 0);
 
 	ctx = pppoat_alloc(sizeof(*ctx));
