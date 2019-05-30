@@ -58,7 +58,12 @@ pppoat_LDFLAGS =
 
 man_MANS = docs/pppoat.8
 
-EXTRA_DIST = $(man_MANS) autogen.sh Doxyfile README.md
+EXTRA_DIST =		\
+	$(man_MANS)	\
+	autogen.sh	\
+	Doxyfile	\
+	README.md	\
+	ut/pppoat.conf
 
 check_PROGRAMS = ut/ut
 TESTS = $(check_PROGRAMS)
