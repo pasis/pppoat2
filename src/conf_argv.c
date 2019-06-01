@@ -41,6 +41,7 @@ static const struct conf_argv_option conf_argv_opts[] = {
 	{ "interface",	'i', true,  "Interface module" },
 	{ "transport",	't', true,  "Transport module" },
 	{ "server",	's', false, "Server side" },
+	{ "list",	'l', false, "Print list of supported modules" },
 	{ "verbose",	'v', false, "Print debug messages" },
 };
 

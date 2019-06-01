@@ -21,6 +21,7 @@
 
 #include "conf.h"
 #include "memory.h"
+#include "misc.h"	/* ARRAY_SIZE */
 #include "module.h"
 #include "packet.h"
 #include "pipeline.h"
@@ -36,6 +37,21 @@ static struct pppoat_semaphore exit_sem;
 static const pppoat_log_level_t default_log_level = PPPOAT_DEBUG;
 static struct pppoat_log_driver * const default_log_drv =
 						&pppoat_log_driver_stderr;
+
+/* Interface modules. */
+extern struct pppoat_module_impl pppoat_module_if_pppd;
+extern struct pppoat_module_impl pppoat_module_if_tun;
+extern struct pppoat_module_impl pppoat_module_if_tap;
+/* Transport modules. */
+extern struct pppoat_module_impl pppoat_module_tp_udp;
+
+/* Array of all supported modules. */
+struct pppoat_module_impl *pppoat_modules[] = {
+	&pppoat_module_if_pppd,
+	&pppoat_module_if_tun,
+	&pppoat_module_if_tap,
+	&pppoat_module_tp_udp,
+};
 
 static int log_init(struct pppoat_conf *conf)
 {
@@ -107,10 +123,20 @@ void pppoat_fini(struct pppoat *ctx)
 	pppoat_free(ctx->p_conf);
 }
 
-extern struct pppoat_module_impl pppoat_module_if_pppd;
-extern struct pppoat_module_impl pppoat_module_if_tun;
-extern struct pppoat_module_impl pppoat_module_if_tap;
-extern struct pppoat_module_impl pppoat_module_tp_udp;
+static void modules_print_pretty(struct pppoat_module_impl *mod)
+{
+	printf("%s\t- %s.\n", mod->mod_name, mod->mod_descr);
+}
+
+static void modules_print_type(enum pppoat_module_type type)
+{
+	size_t i;
+
+	for (i = 0; i < ARRAY_SIZE(pppoat_modules); ++i)
+		if (pppoat_modules[i]->mod_type == type ||
+		    type == PPPOAT_MODULE_UNKNOWN)
+			modules_print_pretty(pppoat_modules[i]);
+}
 
 static void pppoat_sighandler(int signo)
 {
@@ -144,8 +170,7 @@ int main(int argc, char **argv)
 	struct pppoat_module *mod;
 	struct pppoat_module *mod2;
 	char                 *file;
-	bool                  help;
-	bool                  server;
+	bool                  flag;
 	int                   rc;
 
 	/* First, initialise default logger to catch logging on early stages. */
@@ -213,9 +238,17 @@ int main(int argc, char **argv)
 	 * Print help if user asks.
 	 */
 
-	pppoat_conf_find_bool(ctx->p_conf, "help", &help);
-	if (help) {
+	pppoat_conf_find_bool(ctx->p_conf, "help", &flag);
+	if (flag) {
 		pppoat_conf_print_usage(argc, argv);
+		goto exit;
+	}
+	pppoat_conf_find_bool(ctx->p_conf, "list", &flag);
+	if (flag) {
+		printf("Interface modules:\n\n");
+		modules_print_type(PPPOAT_MODULE_INTERFACE);
+		printf("\nTransport modules:\n\n");
+		modules_print_type(PPPOAT_MODULE_TRANSPORT);
 		goto exit;
 	}
 
@@ -223,8 +256,8 @@ int main(int argc, char **argv)
 	 * XXX Check hardcoded modules pipeline.
 	 */
 
-	pppoat_conf_find_bool(ctx->p_conf, "server", &server);
-	if (server) {
+	pppoat_conf_find_bool(ctx->p_conf, "server", &flag);
+	if (flag) {
 		/* XXX Use default internal IPs with -s option. */
 		rc = pppoat_conf_store(ctx->p_conf, "pppd.ip", "10.0.0.1:10.0.0.2");
 		PPPOAT_ASSERT(rc == 0);
