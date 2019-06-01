@@ -37,24 +37,24 @@ static const pppoat_log_level_t default_log_level = PPPOAT_DEBUG;
 static struct pppoat_log_driver * const default_log_drv =
 						&pppoat_log_driver_stderr;
 
-static void log_init_or_exit(struct pppoat_conf *conf)
+static int log_init(struct pppoat_conf *conf)
 {
 	struct pppoat_log_driver *drv   = NULL;
 	pppoat_log_level_t        level = 0;
 	int                       rc;
 
-	if (conf == NULL) {
-		drv   = default_log_drv;
-		level = default_log_level;
-	}
+	drv   = default_log_drv;
+	level = default_log_level;
+
+	/* TODO Check log driver/level in conf. */
 
 	rc = pppoat_log_init(conf, drv, level);
 	if (rc != 0) {
 		/* We can't use pppoat_log(), just report to stderr. */
 		fprintf(stderr, "Could not initialise %s log subsystem "
 				"(rc=%d)", drv->ldrv_name, rc);
-		exit(1);
 	}
+	return rc;
 }
 
 int pppoat_init(struct pppoat *ctx)
@@ -118,9 +118,25 @@ static void pppoat_sighandler(int signo)
 	pppoat_semaphore_post(&exit_sem);
 }
 
-static struct sigaction act = {
+static struct sigaction pppoat_sigaction = {
 	.sa_handler = pppoat_sighandler,
 };
+
+static struct sigaction default_sigaction = {
+	.sa_handler = SIG_DFL,
+};
+
+static void pppoat_cleanup(struct pppoat *ctx)
+{
+	if (ctx != NULL) {
+		pppoat_fini(ctx);
+		pppoat_free(ctx);
+	}
+	/* Restore default handlers before finalising the semaphore. */
+	(void)sigaction(SIGTERM, &default_sigaction, NULL);
+	(void)sigaction(SIGINT, &default_sigaction, NULL);
+	pppoat_semaphore_fini(&exit_sem);
+}
 
 int main(int argc, char **argv)
 {
@@ -133,7 +149,9 @@ int main(int argc, char **argv)
 	int                   rc;
 
 	/* First, initialise default logger to catch logging on early stages. */
-	log_init_or_exit(NULL);
+	rc = log_init(NULL);
+	if (rc != 0)
+		return 1;
 
 	pppoat_info("pppoat", "Current version is under development!");
 	pppoat_info("pppoat", "You can try PPP over UDP in the following way:");
@@ -147,8 +165,8 @@ int main(int argc, char **argv)
 
 	pppoat_semaphore_init(&exit_sem, 0);
 
-	rc = sigaction(SIGTERM, &act, NULL)
-	  ?: sigaction(SIGINT, &act, NULL);
+	rc = sigaction(SIGTERM, &pppoat_sigaction, NULL)
+	  ?: sigaction(SIGINT, &pppoat_sigaction, NULL);
 	rc = rc == 0 ? 0 : P_ERR(-errno);
 	if (signal(SIGPIPE, SIG_IGN) == SIG_ERR)
 		rc = rc ?: P_ERR(-errno);
@@ -179,6 +197,17 @@ int main(int argc, char **argv)
 	}
 
 	pppoat_conf_dump(ctx->p_conf);
+
+	/*
+	 * Re-init logging system, it may be configured via configuration.
+	 */
+
+	pppoat_log_fini();
+	rc = log_init(ctx->p_conf);
+	if (rc != 0) {
+		pppoat_cleanup(ctx);
+		return 1;
+	}
 
 	/*
 	 * Print help if user asks.
@@ -236,11 +265,7 @@ int main(int argc, char **argv)
 	pppoat_free(mod2);
 
 exit:
-	pppoat_fini(ctx);
-	pppoat_free(ctx);
-
-	pppoat_semaphore_fini(&exit_sem);
-
+	pppoat_cleanup(ctx);
 	pppoat_log_fini();
 
 	return 0;
