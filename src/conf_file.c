@@ -72,6 +72,26 @@ static char *conf_file_key(char *section, char *sfx)
 	return key;
 }
 
+static int conf_file_store(struct pppoat_conf *conf, char *key, char *val)
+{
+	struct pppoat_conf_record *r;
+	int                        rc;
+
+	r = pppoat_conf_lookup(conf, key);
+	if (r != NULL) {
+		pppoat_conf_record_put(r);
+		/*
+		 * If the key exists, it is not an error. File source has
+		 * lower priority than other sources (e.g. argv source),
+		 * but in some scenarios is processed after them.
+		 */
+		rc = 0;
+	} else
+		rc = pppoat_conf_store(conf, key, val);
+
+	return rc;
+}
+
 int pppoat_conf_read_file(struct pppoat_conf *conf, const char *filename)
 {
 	char   *section = NULL;
@@ -131,7 +151,7 @@ int pppoat_conf_read_file(struct pppoat_conf *conf, const char *filename)
 				rc = P_ERR(-ENOMEM);
 				break;
 			}
-			rc  = pppoat_conf_store(conf, key, val);
+			rc = conf_file_store(conf, key, val);
 			pppoat_free(key);
 		}
 	} while (rc == 0);
