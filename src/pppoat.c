@@ -21,7 +21,7 @@
 
 #include "conf.h"
 #include "memory.h"
-#include "misc.h"	/* ARRAY_SIZE */
+#include "misc.h"	/* ARRAY_SIZE, pppoat_streq */
 #include "module.h"
 #include "packet.h"
 #include "pipeline.h"
@@ -31,6 +31,7 @@
 #include <signal.h>	/* sigaction */
 #include <stdio.h>	/* fprintf */
 #include <stdlib.h>	/* exit */
+#include <string.h>
 
 static struct pppoat_semaphore exit_sem;
 
@@ -123,6 +124,16 @@ void pppoat_fini(struct pppoat *ctx)
 	pppoat_free(ctx->p_conf);
 }
 
+static struct pppoat_module_impl *modules_find(const char *name)
+{
+	size_t i;
+
+	for (i = 0; i < ARRAY_SIZE(pppoat_modules); ++i)
+		if (pppoat_streq(pppoat_modules[i]->mod_name, name))
+			return pppoat_modules[i];
+	return NULL;
+}
+
 static void modules_print_pretty(struct pppoat_module_impl *mod)
 {
 	printf("%s\t- %s.\n", mod->mod_name, mod->mod_descr);
@@ -166,12 +177,15 @@ static void pppoat_cleanup(struct pppoat *ctx)
 
 int main(int argc, char **argv)
 {
-	struct pppoat        *ctx;
-	struct pppoat_module *mod;
-	struct pppoat_module *mod2;
-	char                 *file;
-	bool                  flag;
-	int                   rc;
+	struct pppoat             *ctx;
+	struct pppoat_module_impl *iface;
+	struct pppoat_module_impl *tp;
+	struct pppoat_module      *if_mod;
+	struct pppoat_module      *tp_mod;
+	char                      *file;
+	char                      *name;
+	bool                       flag;
+	int                        rc;
 
 	/* First, initialise default logger to catch logging on early stages. */
 	rc = log_init(NULL);
@@ -263,19 +277,42 @@ int main(int argc, char **argv)
 		PPPOAT_ASSERT(rc == 0);
 	}
 
-	mod = pppoat_alloc(sizeof *mod);
-	PPPOAT_ASSERT(mod != NULL);
-	mod2 = pppoat_alloc(sizeof *mod2);
-	PPPOAT_ASSERT(mod2 != NULL);
-	rc = pppoat_module_init(mod, &pppoat_module_if_pppd, ctx);
+	rc = pppoat_conf_find_string_alloc(ctx->p_conf, "interface", &name);
+	if (rc == -ENOENT) {
+		name = pppoat_strdup("pppd");
+		rc = name == NULL ? P_ERR(-ENOMEM) : 0;
+	}
 	PPPOAT_ASSERT(rc == 0);
-	rc = pppoat_module_init(mod2, &pppoat_module_tp_udp, ctx);
+	iface = modules_find(name);
+	PPPOAT_ASSERT(iface != NULL);
+	pppoat_free(name);
+
+	rc = pppoat_conf_find_string_alloc(ctx->p_conf, "transport", &name);
+	if (rc == -ENOENT) {
+		name = pppoat_strdup("udp");
+		rc = name == NULL ? P_ERR(-ENOMEM) : 0;
+	}
 	PPPOAT_ASSERT(rc == 0);
-	pppoat_pipeline_add_module(ctx->p_pipeline, mod);
-	pppoat_pipeline_add_module(ctx->p_pipeline, mod2);
-	rc = pppoat_module_run(mod);
+	tp = modules_find(name);
+	PPPOAT_ASSERT(tp != NULL);
+	pppoat_free(name);
+
+	PPPOAT_ASSERT(iface->mod_type == PPPOAT_MODULE_INTERFACE);
+	PPPOAT_ASSERT(tp->mod_type == PPPOAT_MODULE_TRANSPORT);
+
+	if_mod = pppoat_alloc(sizeof *if_mod);
+	PPPOAT_ASSERT(if_mod != NULL);
+	tp_mod = pppoat_alloc(sizeof *tp_mod);
+	PPPOAT_ASSERT(tp_mod != NULL);
+	rc = pppoat_module_init(if_mod, iface, ctx);
 	PPPOAT_ASSERT(rc == 0);
-	rc = pppoat_module_run(mod2);
+	rc = pppoat_module_init(tp_mod, tp, ctx);
+	PPPOAT_ASSERT(rc == 0);
+	pppoat_pipeline_add_module(ctx->p_pipeline, if_mod);
+	pppoat_pipeline_add_module(ctx->p_pipeline, tp_mod);
+	rc = pppoat_module_run(if_mod);
+	PPPOAT_ASSERT(rc == 0);
+	rc = pppoat_module_run(tp_mod);
 	PPPOAT_ASSERT(rc == 0);
 	pppoat_pipeline_ready(ctx->p_pipeline, true);
 
@@ -290,12 +327,12 @@ int main(int argc, char **argv)
 	 */
 
 	pppoat_pipeline_ready(ctx->p_pipeline, false);
-	pppoat_module_stop(mod);
-	pppoat_module_stop(mod2);
-	pppoat_module_fini(mod);
-	pppoat_module_fini(mod2);
-	pppoat_free(mod);
-	pppoat_free(mod2);
+	pppoat_module_stop(if_mod);
+	pppoat_module_stop(tp_mod);
+	pppoat_module_fini(if_mod);
+	pppoat_module_fini(tp_mod);
+	pppoat_free(if_mod);
+	pppoat_free(tp_mod);
 
 exit:
 	pppoat_cleanup(ctx);
