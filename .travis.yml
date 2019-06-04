@@ -1,12 +1,32 @@
 language: c
-install:
-    - sudo apt-get -y install clang autoconf-archive libtool
+
+os:
+    - linux
+    - osx
+
+compiler:
+    - gcc
+    - clang
+
+addons:
+    apt:
+        packages:
+            - autoconf-archive
+            - ppp
+    homebrew:
+        packages:
+            - autoconf-archive
+
 before_script:
     - ./autogen.sh
+
 script:
-    - ./configure ${CONFIGURE_OPT} && make && make check
+    - ./configure ${CONFIGURE_OPT}
+    - make
+    - make check
+
 env:
     - CONFIGURE_OPT=""
-    - CONFIGURE_OPT="CC=clang"
+
 matrix:
     fast_finish: true
