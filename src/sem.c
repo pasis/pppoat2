@@ -19,6 +19,7 @@
 
 #include "trace.h"
 
+#include "misc.h"	/* imply */
 #include "sem.h"
 
 #ifdef __APPLE__
@@ -34,7 +35,20 @@ void pppoat_semaphore_fini(struct pppoat_semaphore *sem)
 
 void pppoat_semaphore_wait(struct pppoat_semaphore *sem)
 {
-	dispatch_semaphore_wait(sem->s_sem, DISPATCH_TIME_FOREVER);
+	long rc;
+
+	rc = dispatch_semaphore_wait(sem->s_sem, DISPATCH_TIME_FOREVER);
+
+	PPPOAT_ASSERT(rc == 0);
+}
+
+void pppoat_semaphore_trywait(struct pppoat_semaphore *sem)
+{
+	long rc;
+
+	rc = dispatch_semaphore_wait(sem->s_sem, DISPATCH_TIME_NOW);
+
+	return rc == 0;
 }
 
 void pppoat_semaphore_post(struct pppoat_semaphore *sem)
@@ -70,6 +84,19 @@ void pppoat_semaphore_wait(struct pppoat_semaphore *sem)
 	} while (rc == -1 && errno == EINTR);
 
 	PPPOAT_ASSERT(rc == 0);
+}
+
+bool pppoat_semaphore_trywait(struct pppoat_semaphore *sem)
+{
+	int rc;
+
+	do {
+		rc = sem_trywait(&sem->s_sem);
+	} while (rc == -1 && errno == EINTR);
+
+	PPPOAT_ASSERT(imply(rc == -1, errno == EAGAIN));
+
+	return !(rc == -1 && errno == EAGAIN);
 }
 
 void pppoat_semaphore_post(struct pppoat_semaphore *sem)

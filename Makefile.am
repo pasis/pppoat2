@@ -76,6 +76,7 @@ ut_ut_SOURCES =			\
 	ut/main.c		\
 	ut/packet.c		\
 	ut/queue.c		\
+	ut/sem.c		\
 	ut/ut.c
 
 ut_ut_SOURCES +=		\

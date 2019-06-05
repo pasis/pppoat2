@@ -37,6 +37,7 @@ struct pppoat_semaphore {
 void pppoat_semaphore_init(struct pppoat_semaphore *sem, unsigned int value);
 void pppoat_semaphore_fini(struct pppoat_semaphore *sem);
 void pppoat_semaphore_wait(struct pppoat_semaphore *sem);
+bool pppoat_semaphore_trywait(struct pppoat_semaphore *sem);
 void pppoat_semaphore_post(struct pppoat_semaphore *sem);
 
 #endif /* __PPPOAT_SEMAPHORE_H__ */
