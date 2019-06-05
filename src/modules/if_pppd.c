@@ -228,6 +228,9 @@ static int if_pppd_run(struct pppoat_module *mod)
 	ctx->ipc_rd       = pipe_rd[0];
 	ctx->ipc_wr       = pipe_wr[1];
 
+	(void)pppoat_io_fd_blocking_set(ctx->ipc_rd, false);
+	(void)pppoat_io_fd_blocking_set(ctx->ipc_wr, false);
+
 	rc = pppoat_thread_start(&ctx->ipc_thread);
 	PPPOAT_ASSERT(rc == 0); /* XXX */
 
