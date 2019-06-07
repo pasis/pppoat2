@@ -20,6 +20,8 @@
 #ifndef __PPPOAT_SEMAPHORE_H__
 #define __PPPOAT_SEMAPHORE_H__
 
+#include <stdbool.h>		/* bool */
+
 #ifdef __APPLE__
 #include <dispatch/dispatch.h>	/* dispatch_semaphore_t */
 #else

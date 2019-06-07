@@ -42,7 +42,7 @@ void pppoat_semaphore_wait(struct pppoat_semaphore *sem)
 	PPPOAT_ASSERT(rc == 0);
 }
 
-void pppoat_semaphore_trywait(struct pppoat_semaphore *sem)
+bool pppoat_semaphore_trywait(struct pppoat_semaphore *sem)
 {
 	long rc;
 
