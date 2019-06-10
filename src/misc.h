@@ -50,4 +50,7 @@
  */
 int pppoat_strtol(char *str, long *out);
 
+/* XXX TODO Replace with a function. */
+#define pppoat_max(a, b) ((a) > (b) ? (a) : (b))
+
 #endif /* __PPPOAT_MISC_H__ */
