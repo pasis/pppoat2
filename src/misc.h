@@ -24,6 +24,11 @@
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
 #endif
 
+#ifndef container_of
+#define container_of(ptr, type, member) \
+		((type *)((char *)(ptr) - (char *)(&((type *)0)->member)))
+#endif
+
 /** Returns true iff string s1 and s2 are equal. */
 #define pppoat_streq(s1, s2) (strcmp((s1), (s2)) == 0)
 
