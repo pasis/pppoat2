@@ -17,6 +17,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "config.h"
 #include "trace.h"
 
 #include "conf.h"
@@ -45,6 +46,7 @@ extern struct pppoat_module_impl pppoat_module_if_tun;
 extern struct pppoat_module_impl pppoat_module_if_tap;
 /* Transport modules. */
 extern struct pppoat_module_impl pppoat_module_tp_udp;
+extern struct pppoat_module_impl pppoat_module_tp_xmpp;
 
 /* Array of all supported modules. */
 struct pppoat_module_impl *pppoat_modules[] = {
@@ -52,6 +54,9 @@ struct pppoat_module_impl *pppoat_modules[] = {
 	&pppoat_module_if_tun,
 	&pppoat_module_if_tap,
 	&pppoat_module_tp_udp,
+#ifdef HAVE_MODULE_XMPP
+	&pppoat_module_tp_xmpp,
+#endif
 };
 
 static int log_init(struct pppoat_conf *conf)
