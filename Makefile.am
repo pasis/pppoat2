@@ -1,5 +1,4 @@
-DEBUG_FLAGS = -O0 -g3 -Wall -Wunused -Werror
-AM_CFLAGS = $(DEBUG_FLAGS) -I$(top_srcdir)/src
+AM_CFLAGS = -I$(top_srcdir)/src
 
 bin_PROGRAMS = pppoat
 

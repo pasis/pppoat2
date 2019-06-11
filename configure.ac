@@ -28,4 +28,7 @@ if test "x$enable_xmpp" = xyes -a "x$libstrophe_found" != xyes; then
     AC_MSG_ERROR([libstrophe is required for xmpp module])
 fi
 
+# Debug cflags
+CFLAGS="$CFLAGS -O0 -g3 -Wall -Wunused -Werror"
+
 AC_OUTPUT
