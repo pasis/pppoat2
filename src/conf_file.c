@@ -101,7 +101,7 @@ int pppoat_conf_read_file(struct pppoat_conf *conf, const char *filename)
 	char   *val;
 	FILE   *f;
 	size_t  len;
-	int     rc;
+	int     rc = 0;
 
 	line = pppoat_alloc(CONF_FILE_LINE_MAX);
 	if (line == NULL)
