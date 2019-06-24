@@ -20,6 +20,7 @@
 #include "trace.h"
 
 #include "magic.h"
+#include "misc.h"	/* imply */
 #include "thread.h"
 
 #include <pthread.h>
@@ -73,7 +74,8 @@ int pppoat_thread_join(struct pppoat_thread *thread)
 	rc = pthread_join(thread->t_thread, &retval);
 	rc = rc == 0 ? 0 : P_ERR(-rc);
 
-	PPPOAT_ASSERT(rc != 0 || retval ==  NULL || retval == PTHREAD_CANCELED);
+	PPPOAT_ASSERT(imply(rc == 0,
+			    retval ==  NULL || retval == PTHREAD_CANCELED));
 	if (rc == 0 && retval == PTHREAD_CANCELED)
 		pppoat_debug("thread", "Thread %p was cancelled", thread);
 
