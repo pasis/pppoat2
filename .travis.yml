@@ -22,6 +22,7 @@ addons:
         packages:
             - autoconf-archive
             - libstrophe
+        update: true
 
 before_script:
     - ./autogen.sh
