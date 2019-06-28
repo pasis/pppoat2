@@ -35,6 +35,7 @@ void add_all_tests(struct pppoat_ut *ut)
 	extern struct pppoat_ut_group pppoat_tests_packet;
 	extern struct pppoat_ut_group pppoat_tests_queue;
 	extern struct pppoat_ut_group pppoat_tests_thread;
+	extern struct pppoat_ut_group pppoat_tests_trace;
 
 	pppoat_ut_group_add(ut, &pppoat_tests_base64);
 	pppoat_ut_group_add(ut, &pppoat_tests_list);
@@ -43,6 +44,7 @@ void add_all_tests(struct pppoat_ut *ut)
 	pppoat_ut_group_add(ut, &pppoat_tests_packet);
 	pppoat_ut_group_add(ut, &pppoat_tests_queue);
 	pppoat_ut_group_add(ut, &pppoat_tests_thread);
+	pppoat_ut_group_add(ut, &pppoat_tests_trace);
 }
 
 int main(int argc, char **argv)
