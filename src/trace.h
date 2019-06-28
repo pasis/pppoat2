@@ -26,22 +26,41 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
-/* 
- * TODO It is a good idea to finalise log subsystem before abort(3).
- * We want to save as much logs as possible on crash. And some log drivers may
- * implement deferred logic.
- */
+#ifdef NDEBUG
+#define PPPOAT_NDEBUG 1
+#else
+#define PPPOAT_NDEBUG 0
+#endif /* NDEBUG */
 
 #define TRACE_LOC_F "%s:%d: %s():"
 #define TRACE_LOC_P __FILE__, __LINE__, __func__
 
-#ifdef NDEBUG
-#define PPPOAT_TRACE_NOOP do {} while (0)
-#define PPPOAT_ASSERT_INFO(expr, fmt, ...) PPPOAT_TRACE_NOOP
-#define PPPOAT_ASSERT(expr)                PPPOAT_TRACE_NOOP
-#define P_ERR(error)                       (error)
-#else /* NDEBUG */
+#define pppoat_debug(area, fmt, ...)					     \
+	do {								     \
+		if (!PPPOAT_NDEBUG)					     \
+			pppoat_log(PPPOAT_DEBUG, area, fmt, ## __VA_ARGS__); \
+	} while (0)
 
+#define pppoat_info(area, fmt, ...) \
+	pppoat_log(PPPOAT_INFO, area, fmt, ## __VA_ARGS__)
+#define pppoat_error(area, fmt, ...) \
+	pppoat_log(PPPOAT_ERROR, area, fmt, ## __VA_ARGS__)
+#define pppoat_fatal(area, fmt, ...) \
+	pppoat_log(PPPOAT_FATAL, area, fmt, ## __VA_ARGS__)
+
+/**
+ * Prints error code and returns the code.
+ *
+ * Use this macro in a place where an error first occurs. For example:
+ *	if (ptr == NULL)
+ *		return P_ERR(-ENOMEM);
+ * or
+ * 	fd = open(name, O_RDONLY);
+ * 	rc = fd < 0 ? P_ERR(-errno) : 0;
+ */
+#if (PPPOAT_NDEBUG == 1)
+#define P_ERR(error) (error)
+#else
 #define P_ERR(error)                                          \
 	({                                                    \
 		int __perror = (error);                       \
@@ -49,8 +68,20 @@
 			     TRACE_LOC_P, __perror);          \
 		__perror;                                     \
 	})
+#endif /* PPPOAT_NDEBUG */
 
-#define PPPOAT_ASSERT_INFO(expr, fmt, ...)                                     \
+/**
+ * Implementation of the assert macro.
+ *
+ * Use wrappers PPPOAT_ASSERT() and PPPOAT_ASSERT_INFO() instead of the current
+ * macro. Depending on the build configuration, we may want to remove asserts
+ * from the target binary and this task is for the wrappers.
+ *
+ * @todo It is a good idea to finalise log subsystem before abort(3).
+ * We want to save as much logs as possible on crash. And some log drivers may
+ * implement deferred logic.
+ */
+#define PPPOAT_ASSERT_INFO_IMPL(expr, fmt, ...)                                \
 	do {                                                                   \
 		const char *__fmt  = (fmt);                                    \
 		bool        __expr = (expr);                                   \
@@ -67,8 +98,12 @@
 		}                                                              \
 	} while (0)
 
-#define PPPOAT_ASSERT(expr) PPPOAT_ASSERT_INFO(expr, NULL)
+#define PPPOAT_ASSERT_INFO(expr, fmt, ...)				       \
+	do {								       \
+		if (!PPPOAT_NDEBUG)					       \
+			PPPOAT_ASSERT_INFO_IMPL((expr), (fmt), ## __VA_ARGS__);\
+	} while (0)
 
-#endif /* NDEBUG */
+#define PPPOAT_ASSERT(expr) PPPOAT_ASSERT_INFO(expr, NULL)
 
 #endif /* __PPPOAT_TRACE_H__ */

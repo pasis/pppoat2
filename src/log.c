@@ -17,9 +17,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "memory.h"
+#include "trace.h"
 
 #include "log.h"
+#include "memory.h"
 
 #include <errno.h>
 #include <stdarg.h>

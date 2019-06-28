@@ -66,20 +66,6 @@ void pppoat_log(pppoat_log_level_t level, const char *area,
  */
 void pppoat_log_hexdump(void *buf, size_t len);
 
-#ifdef NDEBUG
-#define pppoat_debug(area, fmt, ...) do {} while (0)
-#else  /* NDEBUG */
-#define pppoat_debug(area, fmt, ...) \
-	pppoat_log(PPPOAT_DEBUG, area, fmt, ## __VA_ARGS__)
-#endif /* NDEBUG */
-
-#define pppoat_info(area, fmt, ...) \
-	pppoat_log(PPPOAT_INFO, area, fmt, ## __VA_ARGS__)
-#define pppoat_error(area, fmt, ...) \
-	pppoat_log(PPPOAT_ERROR, area, fmt, ## __VA_ARGS__)
-#define pppoat_fatal(area, fmt, ...) \
-	pppoat_log(PPPOAT_FATAL, area, fmt, ## __VA_ARGS__)
-
 /**
  * Simple log driver. Prints all messages to stderr.
  * This driver doesn't fail and has no dependencies.
