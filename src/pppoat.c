@@ -197,16 +197,6 @@ int main(int argc, char **argv)
 	if (rc != 0)
 		return 1;
 
-	pppoat_info("pppoat", "Current version is under development!");
-	pppoat_info("pppoat", "You can try PPP over UDP in the following way:");
-	pppoat_info("pppoat", "Make sure you have pppd (package ppp) and run the commands");
-	pppoat_info("pppoat", "on the hosts you want to connect (replace port number and addresses");
-	pppoat_info("pppoat", "with proper values, -s must be passed on a single host).");
-	pppoat_info("pppoat", "");
-	pppoat_info("pppoat", "  pppoat -s udp.port=5000 udp.host=192.168.1.2");
-	pppoat_info("pppoat", "  pppoat udp.port=5000 udp.host=192.168.1.1");
-	pppoat_info("pppoat", "");
-
 	pppoat_semaphore_init(&exit_sem, 0);
 
 	rc = sigaction(SIGTERM, &pppoat_sigaction, NULL)
@@ -272,15 +262,8 @@ int main(int argc, char **argv)
 	}
 
 	/*
-	 * XXX Check hardcoded modules pipeline.
+	 * Build modules pipeline.
 	 */
-
-	pppoat_conf_find_bool(ctx->p_conf, "server", &flag);
-	if (flag) {
-		/* XXX Use default internal IPs with -s option. */
-		rc = pppoat_conf_store(ctx->p_conf, "pppd.ip", "10.0.0.1:10.0.0.2");
-		PPPOAT_ASSERT(rc == 0);
-	}
 
 	rc = pppoat_conf_find_string_alloc(ctx->p_conf, "interface", &name);
 	if (rc == -ENOENT) {
