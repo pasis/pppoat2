@@ -26,6 +26,11 @@
 #include <pthread.h>
 #include <stdbool.h>
 
+/* Workaround for Android's pthreads. */
+#ifndef PTHREAD_CANCELED
+#define PTHREAD_CANCELED ((void *) -1)
+#endif
+
 bool pppoat_thread_invariant(struct pppoat_thread *thread)
 {
 	return thread->t_magic == PPPOAT_THREAD_MAGIC;
