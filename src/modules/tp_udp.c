@@ -22,6 +22,7 @@
 #include "conf.h"
 #include "io.h"
 #include "magic.h"
+#include "misc.h"	/* container_of */
 #include "memory.h"
 #include "module.h"
 #include "packet.h"
@@ -190,7 +191,6 @@ static int tp_udp_init(struct pppoat_module *mod, struct pppoat_conf *conf)
 		goto err_sock_close;
 
 	ctx->uc_module = mod;
-	ctx->uc_thread.t_userdata = ctx;
 	mod->m_userdata = ctx;
 
 	return 0;
@@ -220,7 +220,8 @@ static void tp_udp_fini(struct pppoat_module *mod)
 
 static void tp_udp_worker(struct pppoat_thread *thread)
 {
-	struct tp_udp_ctx      *ctx = thread->t_userdata;
+	struct tp_udp_ctx      *ctx =
+			container_of(thread, struct tp_udp_ctx, uc_thread);
 	struct pppoat_packets  *pkts;
 	struct pppoat_pipeline *pipeline;
 	struct pppoat_packet   *pkt;

@@ -113,7 +113,6 @@ static int if_pppd_init(struct pppoat_module *mod, struct pppoat_conf *conf)
 	rc = pppoat_thread_init(&ctx->ipc_thread, &if_pppd_worker);
 	if (rc != 0)
 		goto err_free_ip;
-	ctx->ipc_thread.t_userdata = ctx;
 
 	ctx->ipc_module = mod;
 	ctx->ipc_magic = PPPOAT_MODULE_IF_PPPD_MAGIC;
@@ -142,7 +141,8 @@ static void if_pppd_fini(struct pppoat_module *mod)
 
 static void if_pppd_worker(struct pppoat_thread *thread)
 {
-	struct if_pppd_ctx     *ctx = thread->t_userdata;
+	struct if_pppd_ctx     *ctx =
+			container_of(thread, struct if_pppd_ctx, ipc_thread);
 	struct pppoat_packets  *pkts;
 	struct pppoat_pipeline *pipeline;
 	struct pppoat_packet   *pkt;

@@ -85,7 +85,6 @@ static int if_tuntap_init(struct pppoat_module *mod,
 
 	rc = pppoat_thread_init(&ctx->itc_thread, &if_tuntap_worker);
 	PPPOAT_ASSERT(rc == 0); /* XXX */
-	ctx->itc_thread.t_userdata = ctx;
 
 	if (rc == 0)
 		pppoat_debug("tun", "Created interface %s", ctx->itc_ifname);
@@ -116,7 +115,8 @@ static void if_tuntap_fini(struct pppoat_module *mod)
 
 static void if_tuntap_worker(struct pppoat_thread *thread)
 {
-	struct if_tuntap_ctx   *ctx = thread->t_userdata;
+	struct if_tuntap_ctx   *ctx =
+			container_of(thread, struct if_tuntap_ctx, itc_thread);
 	struct pppoat_packets  *pkts;
 	struct pppoat_pipeline *pipeline;
 	struct pppoat_packet   *pkt;
