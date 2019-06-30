@@ -42,6 +42,7 @@ static struct pppoat_log_driver * const default_log_drv =
 
 /* Interface modules. */
 extern struct pppoat_module_impl pppoat_module_if_pppd;
+extern struct pppoat_module_impl pppoat_module_if_stdio;
 extern struct pppoat_module_impl pppoat_module_if_tun;
 extern struct pppoat_module_impl pppoat_module_if_tap;
 /* Transport modules. */
@@ -51,6 +52,7 @@ extern struct pppoat_module_impl pppoat_module_tp_xmpp;
 /* Array of all supported modules. */
 struct pppoat_module_impl *pppoat_modules[] = {
 	&pppoat_module_if_pppd,
+	&pppoat_module_if_stdio,
 	&pppoat_module_if_tun,
 	&pppoat_module_if_tap,
 	&pppoat_module_tp_udp,

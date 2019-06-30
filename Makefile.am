@@ -39,6 +39,7 @@ pppoat_common_headers =	\
 	src/trace.h
 
 pppoat_modules_sources =	\
+	src/modules/if_fd.c	\
 	src/modules/if_pppd.c	\
 	src/modules/if_tun.c	\
 	src/modules/tp_udp.c	\
