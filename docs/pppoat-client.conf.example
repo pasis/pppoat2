@@ -1,0 +1,21 @@
+[core]
+	interface = pppd
+	transport = xmpp
+
+# Other modules:
+#	interface = tun
+#	interface = tap
+#	interface = stdio
+#	transport = udp
+
+[pppd]
+
+[xmpp]
+	jid    = pppoat2@domain.com
+	passwd = pppoat2password
+	remote = pppoat@domain.com
+
+[udp]
+	sport = 5000
+	dport = 5001
+	host  = 10.0.2.2
