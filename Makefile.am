@@ -64,6 +64,9 @@ EXTRA_DIST =				\
 	autogen.sh			\
 	Doxyfile			\
 	README.md			\
+	jni/Android.mk			\
+	jni/Application.mk		\
+	jni/config.h			\
 	docs/pppoat-client.conf.example	\
 	docs/pppoat-server.conf.example	\
 	ut/pppoat.conf
