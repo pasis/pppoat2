@@ -52,12 +52,12 @@ extern struct pppoat_module_impl pppoat_module_tp_xmpp;
 /* Array of all supported modules. */
 struct pppoat_module_impl *pppoat_modules[] = {
 	&pppoat_module_if_pppd,
-	&pppoat_module_if_stdio,
+//	&pppoat_module_if_stdio,
 	&pppoat_module_if_tun,
 	&pppoat_module_if_tap,
 	&pppoat_module_tp_udp,
 #ifdef HAVE_MODULE_XMPP
-	&pppoat_module_tp_xmpp,
+//	&pppoat_module_tp_xmpp,
 #endif
 };
 
@@ -304,7 +304,7 @@ int main(int argc, char **argv)
 	PPPOAT_ASSERT(rc == 0);
 	rc = pppoat_module_run(tp_mod);
 	PPPOAT_ASSERT(rc == 0);
-	pppoat_pipeline_ready(ctx->p_pipeline, true);
+	pppoat_pipeline_start(ctx->p_pipeline);
 
 	/*
 	 * Wait for signal.
@@ -316,7 +316,7 @@ int main(int argc, char **argv)
 	 * Finalisation.
 	 */
 
-	pppoat_pipeline_ready(ctx->p_pipeline, false);
+	pppoat_pipeline_stop(ctx->p_pipeline);
 	pppoat_module_stop(if_mod);
 	pppoat_module_stop(tp_mod);
 	pppoat_module_fini(if_mod);

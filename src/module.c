@@ -24,13 +24,12 @@
 
 /* XXX TODO check if non mandatory interface != NULL */
 
-int pppoat_module_init(struct pppoat_module      *mod,
-		       struct pppoat_module_impl *impl,
-		       struct pppoat             *ctx)
+int pppoat_module_init(struct pppoat_module            *mod,
+		       const struct pppoat_module_impl *impl,
+		       struct pppoat                   *ctx)
 {
 	mod->m_impl = impl;
 	mod->m_pkts = ctx->p_pkts;
-	mod->m_pipeline = ctx->p_pipeline;
 	mod->m_userdata = NULL;
 
 	/* XXX TODO validate impl and impl->mod_ops */
@@ -53,9 +52,16 @@ int pppoat_module_stop(struct pppoat_module *mod)
 	return mod->m_impl->mod_ops->mop_stop(mod);
 }
 
-int pppoat_module_sendto(struct pppoat_module *mod, struct pppoat_packet *pkt)
+int pppoat_module_pkt_get(struct pppoat_module *mod, struct pppoat_packet **pkt)
 {
-	return mod->m_impl->mod_ops->mop_recv(mod, pkt);
+	return mod->m_impl->mod_ops->mop_pkt_get(mod, pkt);
+}
+
+int pppoat_module_pkt_process(struct pppoat_module  *mod,
+			      struct pppoat_packet  *pkt_in,
+			      struct pppoat_packet **pkt_out)
+{
+	return mod->m_impl->mod_ops->mop_pkt_process(mod, pkt_in, pkt_out);
 }
 
 size_t pppoat_module_mtu(struct pppoat_module *mod)

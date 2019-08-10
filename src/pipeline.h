@@ -21,6 +21,7 @@
 #define __PPPOAT_PIPELINE_H__
 
 #include "list.h"
+#include "thread.h"
 
 #include <stdbool.h>
 
@@ -94,23 +95,19 @@ struct pppoat_module;
 struct pppoat_packet;
 
 struct pppoat_pipeline {
-	struct pppoat_list pl_modules;
-	bool               pl_is_ready;
+	struct pppoat_list   pl_modules;
+	struct pppoat_thread pl_thread_send;
+	struct pppoat_thread pl_thread_recv;
+	bool                 pl_running;
 };
 
 int pppoat_pipeline_init(struct pppoat_pipeline *p);
 void pppoat_pipeline_fini(struct pppoat_pipeline *p);
 
+int pppoat_pipeline_start(struct pppoat_pipeline *p);
+void pppoat_pipeline_stop(struct pppoat_pipeline *p);
+
 void pppoat_pipeline_add_module(struct pppoat_pipeline *p,
 				struct pppoat_module   *mod);
-
-void pppoat_pipeline_ready(struct pppoat_pipeline *p, bool ready);
-
-int pppoat_pipeline_packet_send(struct pppoat_pipeline *p,
-				struct pppoat_module   *mod,
-				struct pppoat_packet   *pkt);
-int pppoat_pipeline_packet_recv(struct pppoat_pipeline *p,
-				struct pppoat_module   *mod,
-				struct pppoat_packet   *pkt);
 
 #endif /* __PPPOAT_PIPELINE_H__ */

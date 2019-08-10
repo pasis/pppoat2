@@ -23,11 +23,9 @@
 #include "io.h"
 #include "magic.h"
 #include "memory.h"
-#include "misc.h"
+#include "misc.h"	/* ARRAY_SIZE */
 #include "module.h"
 #include "packet.h"
-#include "pipeline.h"
-#include "thread.h"
 
 #include <errno.h>
 #include <sys/types.h>
@@ -37,14 +35,12 @@
 #include <unistd.h>	/* access, fork, pipe, dup2, exit, ... */
 
 struct if_pppd_ctx {
-	struct pppoat_thread  ipc_thread;
-	struct pppoat_module *ipc_module;
-	const char           *ipc_pppd_path;
-	pid_t                 ipc_pppd_pid;
-	int                   ipc_rd;
-	int                   ipc_wr;
-	char                 *ipc_ip;
-	uint32_t              ipc_magic;
+	const char *ipc_pppd_path;
+	pid_t       ipc_pppd_pid;
+	int         ipc_rd;
+	int         ipc_wr;
+	char       *ipc_ip;
+	uint32_t    ipc_magic;
 };
 
 #define PPPD_CONF_IP   "pppd.ip"
@@ -61,8 +57,6 @@ static const char *pppd_paths[] = {
 	"/usr/bin/pppd",
 	"/usr/local/bin/pppd",
 };
-
-static void if_pppd_worker(struct pppoat_thread *thread);
 
 static const char *if_pppd_path(void)
 {
@@ -110,18 +104,11 @@ static int if_pppd_init(struct pppoat_module *mod, struct pppoat_conf *conf)
 	if (rc != 0 && rc != -ENOENT)
 		goto err;
 
-	rc = pppoat_thread_init(&ctx->ipc_thread, &if_pppd_worker);
-	if (rc != 0)
-		goto err_free_ip;
-
-	ctx->ipc_module = mod;
 	ctx->ipc_magic = PPPOAT_MODULE_IF_PPPD_MAGIC;
 	mod->m_userdata = ctx;
 
 	return 0;
 
-err_free_ip:
-	pppoat_free(ctx->ipc_ip);
 err:
 	pppoat_free(ctx);
 	return rc;
@@ -133,51 +120,9 @@ static void if_pppd_fini(struct pppoat_module *mod)
 
 	PPPOAT_ASSERT(if_pppd_ctx_invariant(ctx));
 
-	pppoat_thread_fini(&ctx->ipc_thread);
 	pppoat_free(ctx->ipc_ip);
 	pppoat_free(ctx);
 	mod->m_userdata = NULL;
-}
-
-static void if_pppd_worker(struct pppoat_thread *thread)
-{
-	struct if_pppd_ctx     *ctx =
-			container_of(thread, struct if_pppd_ctx, ipc_thread);
-	struct pppoat_packets  *pkts;
-	struct pppoat_pipeline *pipeline;
-	struct pppoat_packet   *pkt;
-	size_t                  size;
-	ssize_t                 rlen;
-	int                     fd;
-	int                     rc = 0;
-
-	PPPOAT_ASSERT(if_pppd_ctx_invariant(ctx));
-
-	pipeline = ctx->ipc_module->m_pipeline;
-	pkts = ctx->ipc_module->m_pkts;
-	fd   = ctx->ipc_rd;
-	size = IF_PPPD_MTU;
-	pkt  = pppoat_packet_get(pkts, size);
-	while (rc == 0 && pkt != NULL) {
-		rc = pppoat_io_select_single_read(fd);
-		if (rc != 0)
-			break;
-
-		rlen = read(fd, pkt->pkt_data, pkt->pkt_size);
-		if (rlen < 0 && !pppoat_io_error_is_recoverable(-errno))
-			rc = P_ERR(-errno);
-		if (rlen > 0) {
-			pkt->pkt_size = rlen;
-			rc = pppoat_pipeline_packet_send(pipeline,
-							 ctx->ipc_module, pkt);
-			if (rc != 0)
-				pppoat_packet_put(pkts, pkt);
-			pkt  = pppoat_packet_get(pkts, size);
-		}
-	}
-	if (pkt != NULL)
-		pppoat_packet_put(pkts, pkt);
-	pppoat_debug("pppd", "Worker thread finished. rc=%d pkt=%p", rc, pkt);
 }
 
 static int if_pppd_run(struct pppoat_module *mod)
@@ -231,9 +176,6 @@ static int if_pppd_run(struct pppoat_module *mod)
 	(void)pppoat_io_fd_blocking_set(ctx->ipc_rd, false);
 	(void)pppoat_io_fd_blocking_set(ctx->ipc_wr, false);
 
-	rc = pppoat_thread_start(&ctx->ipc_thread);
-	PPPOAT_ASSERT(rc == 0); /* XXX */
-
 	return 0;
 }
 
@@ -244,8 +186,6 @@ static int if_pppd_stop(struct pppoat_module *mod)
 	int                 rc;
 
 	PPPOAT_ASSERT(if_pppd_ctx_invariant(ctx));
-
-	/* TODO Stop and fini the thread. */
 
 	rc = kill(ctx->ipc_pppd_pid, SIGTERM);
 	PPPOAT_ASSERT(rc == 0); /* XXX */
@@ -261,17 +201,61 @@ static int if_pppd_stop(struct pppoat_module *mod)
 	return 0;
 }
 
-static int if_pppd_recv(struct pppoat_module *mod, struct pppoat_packet *pkt)
+static int if_pppd_pkt_get(struct pppoat_module  *mod,
+			   struct pppoat_packet **pkt)
+{
+	struct if_pppd_ctx   *ctx = mod->m_userdata;
+	struct pppoat_packet *pkt2;
+	size_t                size;
+	ssize_t               rlen;
+	int                   fd;
+	int                   rc;
+
+	PPPOAT_ASSERT(if_pppd_ctx_invariant(ctx));
+
+	size = pppoat_module_mtu(mod);
+	fd   = ctx->ipc_rd;
+	pkt2 = pppoat_packet_get(mod->m_pkts, size);
+	rc   = pkt2 == NULL ? P_ERR(-ENOMEM) : 0;
+
+	rc = rc ?: pppoat_io_select_single_read(fd);
+	if (rc == 0) {
+		rlen = read(fd, pkt2->pkt_data, pkt2->pkt_size);
+		if (rlen < 0) {
+			rc = pppoat_io_error_is_recoverable(-errno) ?
+			     -errno : P_ERR(-errno);
+		}
+		if (rlen == 0)
+			rc = P_ERR(-EIO);
+		if (rlen > 0)
+			pkt2->pkt_size = rlen;
+	}
+	if (rc != 0 && pkt2 != NULL)
+		pppoat_packet_put(mod->m_pkts, pkt2);
+
+	if (rc == 0) {
+		pkt2->pkt_type = PPPOAT_PACKET_SEND;
+		*pkt = pkt2;
+	}
+	return rc;
+}
+
+static int if_pppd_pkt_process(struct pppoat_module  *mod,
+			       struct pppoat_packet  *pkt_in,
+			       struct pppoat_packet **pkt_out)
 {
 	struct if_pppd_ctx *ctx = mod->m_userdata;
 	int                 rc;
 
 	PPPOAT_ASSERT(if_pppd_ctx_invariant(ctx));
+	PPPOAT_ASSERT(pkt_in->pkt_type == PPPOAT_PACKET_RECV);
 
-	rc = pppoat_io_write_sync(ctx->ipc_wr, pkt->pkt_data, pkt->pkt_size);
+	rc = pppoat_io_write_sync(ctx->ipc_wr, pkt_in->pkt_data,
+				  pkt_in->pkt_size);
 	if (rc == 0)
-		pppoat_packet_put(mod->m_pkts, pkt);
+		pppoat_packet_put(mod->m_pkts, pkt_in);
 
+	*pkt_out = NULL;
 	return rc;
 }
 
@@ -281,12 +265,13 @@ static size_t if_pppd_mtu(struct pppoat_module *mod)
 }
 
 static struct pppoat_module_ops if_pppd_ops = {
-	.mop_init = &if_pppd_init,
-	.mop_fini = &if_pppd_fini,
-	.mop_run  = &if_pppd_run,
-	.mop_stop = &if_pppd_stop,
-	.mop_recv = &if_pppd_recv,
-	.mop_mtu  = &if_pppd_mtu,
+	.mop_init        = &if_pppd_init,
+	.mop_fini        = &if_pppd_fini,
+	.mop_run         = &if_pppd_run,
+	.mop_stop        = &if_pppd_stop,
+	.mop_pkt_get     = &if_pppd_pkt_get,
+	.mop_pkt_process = &if_pppd_pkt_process,
+	.mop_mtu         = &if_pppd_mtu,
 };
 
 struct pppoat_module_impl pppoat_module_if_pppd = {

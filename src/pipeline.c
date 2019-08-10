@@ -24,16 +24,24 @@
 #include "packet.h"
 #include "pipeline.h"
 
+static void pipeline_loop_thread(struct pppoat_thread *thread);
+
 static struct pppoat_list_descr pipeline_descr =
 	PPPOAT_LIST_DESCR("Pipeline", struct pppoat_module, m_link, m_magic,
 			  PPPOAT_PIPELINE_MAGIC);
 
 int pppoat_pipeline_init(struct pppoat_pipeline *p)
 {
-	p->pl_is_ready = false;
-	pppoat_list_init(&p->pl_modules, &pipeline_descr);
+	int rc;
 
-	return 0;
+	p->pl_running = false;
+	pppoat_list_init(&p->pl_modules, &pipeline_descr);
+	rc = pppoat_thread_init(&p->pl_thread_send, &pipeline_loop_thread)
+	  ?: pppoat_thread_init(&p->pl_thread_recv, &pipeline_loop_thread);
+	p->pl_thread_send.t_userdata = p;
+	p->pl_thread_recv.t_userdata = p;
+
+	return rc;
 }
 
 static void pipeline_flush(struct pppoat_pipeline *p)
@@ -44,9 +52,35 @@ static void pipeline_flush(struct pppoat_pipeline *p)
 
 void pppoat_pipeline_fini(struct pppoat_pipeline *p)
 {
-	p->pl_is_ready = false;
+	PPPOAT_ASSERT(!p->pl_running);
+
+	pppoat_thread_fini(&p->pl_thread_send);
+	pppoat_thread_fini(&p->pl_thread_recv);
 	pipeline_flush(p);
 	pppoat_list_fini(&p->pl_modules);
+}
+
+int pppoat_pipeline_start(struct pppoat_pipeline *p)
+{
+	int rc;
+
+	rc = pppoat_thread_start(&p->pl_thread_send)
+	  ?: pppoat_thread_start(&p->pl_thread_recv);
+	p->pl_running = rc == 0;
+
+	return rc;
+}
+
+void pppoat_pipeline_stop(struct pppoat_pipeline *p)
+{
+	/* XXX TODO Stop condition.
+	int rc;
+
+	rc = pppoat_thread_join(&p->pl_thread_send)
+	  ?: pppoat_thread_join(&p->pl_thread_recv);
+	PPPOAT_ASSERT(rc == 0);
+	*/
+	p->pl_running = false;
 }
 
 void pppoat_pipeline_add_module(struct pppoat_pipeline *p,
@@ -66,61 +100,55 @@ void pppoat_pipeline_add_module(struct pppoat_pipeline *p,
 	pppoat_list_insert_tail(&p->pl_modules, mod);
 }
 
-void pppoat_pipeline_ready(struct pppoat_pipeline *p, bool ready)
+static int pipeline_module_process(struct pppoat_pipeline *p,
+				   struct pppoat_module   *mod)
 {
-	p->pl_is_ready = ready;
-}
-
-static int pipeline_packet_process(struct pppoat_pipeline *p,
-				   struct pppoat_module   *mod,
-				   struct pppoat_packet   *pkt)
-{
-	enum pppoat_packet_type  type = pkt->pkt_type;
-	struct pppoat_module    *next;
-
-	PPPOAT_ASSERT(type == PPPOAT_PACKET_SEND || type == PPPOAT_PACKET_RECV);
-
-	/* XXX We don't support deferred packets atm. P_ERR() is for debug only. */
-	if (!p->pl_is_ready)
-		return P_ERR(-EAGAIN);
-
-	next = type == PPPOAT_PACKET_SEND ?
-				pppoat_list_next(&p->pl_modules, mod) :
-				pppoat_list_prev(&p->pl_modules, mod);
-	if (next == NULL)
-		return P_ERR(-ENOENT);
-
-	return pppoat_module_sendto(next, pkt);
-}
-
-int pppoat_pipeline_packet_send(struct pppoat_pipeline *p,
-				struct pppoat_module   *mod,
-				struct pppoat_packet   *pkt)
-{
-	PPPOAT_ASSERT(pkt->pkt_type != PPPOAT_PACKET_RECV);
-
-	if (pkt->pkt_type == PPPOAT_PACKET_UNKNOWN)
-		pkt->pkt_type = PPPOAT_PACKET_SEND;
+	struct pppoat_packet *pkt;
+	struct pppoat_packet *pkt_next;
+	int                   rc;
 
 	/*
-	 * Special case when the last module is interface and not transport.
-	 * It implements a loopback.
+	 * TODO Handle loopback when interface module is used instead of
+	 * transport.
 	 */
-	if (mod == pppoat_list_tail(&p->pl_modules) &&
-	    pppoat_module_type(mod) == PPPOAT_MODULE_INTERFACE)
-		pkt->pkt_type = PPPOAT_PACKET_RECV;
 
-	return pipeline_packet_process(p, mod, pkt);
+	rc = pppoat_module_pkt_get(mod, &pkt);
+	while (rc == 0 && pkt != NULL) {
+		if (pkt->pkt_type == PPPOAT_PACKET_SEND)
+			mod = pppoat_list_next(&p->pl_modules, mod);
+		else
+			mod = pppoat_list_prev(&p->pl_modules, mod);
+
+		PPPOAT_ASSERT(pkt->pkt_type == PPPOAT_PACKET_SEND ||
+			      pkt->pkt_type == PPPOAT_PACKET_RECV);
+		PPPOAT_ASSERT(mod != NULL);
+
+		rc = pppoat_module_pkt_process(mod, pkt, &pkt_next);
+		if (rc != 0)
+			pppoat_packet_put(mod->m_pkts, pkt);
+		pkt = pkt_next;
+	}
+	return rc;
 }
 
-int pppoat_pipeline_packet_recv(struct pppoat_pipeline *p,
-				struct pppoat_module   *mod,
-				struct pppoat_packet   *pkt)
+static void pipeline_loop_thread(struct pppoat_thread *thread)
 {
-	PPPOAT_ASSERT(pkt->pkt_type != PPPOAT_PACKET_SEND);
+	struct pppoat_pipeline *p = thread->t_userdata;
+	struct pppoat_module   *mod;
+	int                     rc;
 
-	if (pkt->pkt_type == PPPOAT_PACKET_UNKNOWN)
-		pkt->pkt_type = PPPOAT_PACKET_RECV;
+	/* Cache interface or transport module. */
+	if (thread == &p->pl_thread_send)
+		mod = pppoat_list_head(&p->pl_modules);
+	else {
+		PPPOAT_ASSERT(thread == &p->pl_thread_recv);
+		mod = pppoat_list_tail(&p->pl_modules);
+	}
 
-	return pipeline_packet_process(p, mod, pkt);
+	while (true) {
+		rc = pipeline_module_process(p, mod);
+		if (rc != 0)
+			pppoat_error("pipeline", "Error while processing a "
+						 "packet (rc=%d)", rc);
+	}
 }

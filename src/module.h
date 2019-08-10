@@ -42,7 +42,11 @@ struct pppoat_module_ops {
 	void (*mop_fini)(struct pppoat_module *mod);
 	int (*mop_run)(struct pppoat_module *mod);
 	int (*mop_stop)(struct pppoat_module *mod);
-	int (*mop_recv)(struct pppoat_module *mod, struct pppoat_packet *pkt);
+	int (*mop_pkt_get)(struct pppoat_module  *mod,
+			   struct pppoat_packet **pkt);
+	int (*mop_pkt_process)(struct pppoat_module  *mod,
+			       struct pppoat_packet  *pkt_in,
+			       struct pppoat_packet **pkt_out);
 	size_t (*mop_mtu)(struct pppoat_module *mod);
 };
 
@@ -56,21 +60,24 @@ struct pppoat_module_impl {
 struct pppoat_module {
 	const struct pppoat_module_impl *m_impl;
 	struct pppoat_packets           *m_pkts;
-	struct pppoat_pipeline          *m_pipeline;
 	struct pppoat_list_link          m_link;
 	uint32_t                         m_magic;
 	void                            *m_userdata;
 };
 
-int pppoat_module_init(struct pppoat_module      *mod,
-		       struct pppoat_module_impl *impl,
-		       struct pppoat             *ctx);
+int pppoat_module_init(struct pppoat_module            *mod,
+		       const struct pppoat_module_impl *impl,
+		       struct pppoat                   *ctx);
 void pppoat_module_fini(struct pppoat_module *mod);
 
 int pppoat_module_run(struct pppoat_module *mod);
 int pppoat_module_stop(struct pppoat_module *mod);
 
-int pppoat_module_sendto(struct pppoat_module *mod, struct pppoat_packet *pkt);
+int pppoat_module_pkt_get(struct pppoat_module  *mod,
+			  struct pppoat_packet **pkt);
+int pppoat_module_pkt_process(struct pppoat_module  *mod,
+			      struct pppoat_packet  *pkt_in,
+			      struct pppoat_packet **pkt_out);
 
 size_t pppoat_module_mtu(struct pppoat_module *mod);
 

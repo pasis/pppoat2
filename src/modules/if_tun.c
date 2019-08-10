@@ -23,11 +23,8 @@
 #include "io.h"
 #include "magic.h"
 #include "memory.h"
-#include "misc.h"
 #include "module.h"
 #include "packet.h"
-#include "pipeline.h"
-#include "thread.h"
 
 #include <string.h>		/* strlen */
 #include <unistd.h>		/* open, close, read */
@@ -44,8 +41,6 @@ enum if_tuntap_type {
 
 struct if_tuntap_ctx {
 	enum if_tuntap_type   itc_type;
-	struct pppoat_thread  itc_thread;
-	struct pppoat_module *itc_module;
 	char                 *itc_ifname;
 	int                   itc_fd;
 };
@@ -54,7 +49,6 @@ static int if_tuntap_fd_init(struct if_tuntap_ctx *ctx,
 			     struct pppoat_conf   *conf,
 			     enum if_tuntap_type   type);
 static void if_tuntap_fd_fini(struct if_tuntap_ctx *ctx);
-static void if_tuntap_worker(struct pppoat_thread *thread);
 static void if_tun_compat_layer(struct if_tuntap_ctx *ctx,
 				struct pppoat_packet *pkt,
 				bool                  send);
@@ -63,7 +57,6 @@ static bool if_tuntap_ctx_invariant(const struct if_tuntap_ctx *ctx)
 {
 	return ctx != NULL;
 }
-
 
 static int if_tuntap_init(struct pppoat_module *mod,
 			  struct pppoat_conf   *conf,
@@ -77,19 +70,14 @@ static int if_tuntap_init(struct pppoat_module *mod,
 		return P_ERR(-ENOMEM);
 
 	ctx->itc_type   = type;
-	ctx->itc_module = mod;
 	mod->m_userdata = ctx;
 
 	rc = if_tuntap_fd_init(ctx, conf, type);
-	PPPOAT_ASSERT(rc == 0); /* XXX */
-
-	rc = pppoat_thread_init(&ctx->itc_thread, &if_tuntap_worker);
-	PPPOAT_ASSERT(rc == 0); /* XXX */
 
 	if (rc == 0)
 		pppoat_debug("tun", "Created interface %s", ctx->itc_ifname);
 
-	return 0;
+	return rc;
 }
 
 static int if_tun_init(struct pppoat_module *mod, struct pppoat_conf *conf)
@@ -108,83 +96,82 @@ static void if_tuntap_fini(struct pppoat_module *mod)
 
 	PPPOAT_ASSERT(if_tuntap_ctx_invariant(ctx));
 
-	pppoat_thread_fini(&ctx->itc_thread);
 	if_tuntap_fd_fini(ctx);
 	pppoat_free(ctx);
-}
-
-static void if_tuntap_worker(struct pppoat_thread *thread)
-{
-	struct if_tuntap_ctx   *ctx =
-			container_of(thread, struct if_tuntap_ctx, itc_thread);
-	struct pppoat_packets  *pkts;
-	struct pppoat_pipeline *pipeline;
-	struct pppoat_packet   *pkt;
-	size_t                  size;
-	ssize_t                 rlen;
-	int                     fd;
-	int                     rc = 0;
-
-	PPPOAT_ASSERT(if_tuntap_ctx_invariant(ctx));
-
-	pipeline = ctx->itc_module->m_pipeline;
-	pkts = ctx->itc_module->m_pkts;
-	fd   = ctx->itc_fd;
-	size = pppoat_module_mtu(ctx->itc_module);
-	pkt  = pppoat_packet_get(pkts, size);
-	while (rc == 0 && pkt != NULL) {
-		rc = pppoat_io_select_single_read(fd);
-		if (rc != 0)
-			break;
-
-		rlen = read(fd, pkt->pkt_data, pkt->pkt_size);
-		if (rlen < 0 && !pppoat_io_error_is_recoverable(-errno))
-			rc = P_ERR(-errno);
-		if (rlen > 0) {
-			pkt->pkt_size = rlen;
-			if_tun_compat_layer(ctx, pkt, true);
-			rc = pppoat_pipeline_packet_send(pipeline,
-							 ctx->itc_module, pkt);
-			if (rc != 0)
-				pppoat_packet_put(pkts, pkt);
-			pkt = pppoat_packet_get(pkts, size);
-		}
-	}
-	if (pkt != NULL)
-		pppoat_packet_put(pkts, pkt);
-	pppoat_debug("tun", "Worker thread finished. rc=%d pkt=%p", rc, pkt);
 }
 
 static int if_tuntap_run(struct pppoat_module *mod)
 {
 	struct if_tuntap_ctx *ctx = mod->m_userdata;
-	int                   rc;
 
 	PPPOAT_ASSERT(if_tuntap_ctx_invariant(ctx));
 
-	rc = pppoat_thread_start(&ctx->itc_thread);
-
-	return rc;
+	return 0;
 }
 
 static int if_tuntap_stop(struct pppoat_module *mod)
 {
-	/* TODO */
 	return 0;
 }
 
-static int if_tuntap_recv(struct pppoat_module *mod, struct pppoat_packet *pkt)
+static int if_tuntap_pkt_get(struct pppoat_module  *mod,
+			     struct pppoat_packet **pkt)
+{
+	struct if_tuntap_ctx *ctx = mod->m_userdata;
+	struct pppoat_packet *pkt2;
+	size_t                size;
+	ssize_t               rlen;
+	int                   fd;
+	int                   rc;
+
+	PPPOAT_ASSERT(if_tuntap_ctx_invariant(ctx));
+
+	size = pppoat_module_mtu(mod);
+	fd   = ctx->itc_fd;
+	pkt2 = pppoat_packet_get(mod->m_pkts, size);
+	rc   = pkt2 == NULL ? P_ERR(-ENOMEM) : 0;
+
+	rc = rc ?: pppoat_io_select_single_read(fd);
+	if (rc == 0) {
+		rlen = read(fd, pkt2->pkt_data, pkt2->pkt_size);
+		if (rlen < 0) {
+			rc = pppoat_io_error_is_recoverable(-errno) ?
+			     -errno : P_ERR(-errno);
+		}
+		if (rlen == 0)
+			rc = P_ERR(-EIO);
+		if (rlen > 0) {
+			pkt2->pkt_size = rlen;
+			if_tun_compat_layer(ctx, pkt2, true);
+		}
+	}
+	if (rc != 0 && pkt2 != NULL)
+		pppoat_packet_put(mod->m_pkts, pkt2);
+
+	if (rc == 0) {
+		pkt2->pkt_type = PPPOAT_PACKET_SEND;
+		*pkt = pkt2;
+	}
+	return rc;
+}
+
+static int if_tuntap_pkt_process(struct pppoat_module  *mod,
+				 struct pppoat_packet  *pkt_in,
+				 struct pppoat_packet **pkt_out)
 {
 	struct if_tuntap_ctx *ctx = mod->m_userdata;
 	int                   rc;
 
 	PPPOAT_ASSERT(if_tuntap_ctx_invariant(ctx));
+	PPPOAT_ASSERT(pkt_in->pkt_type == PPPOAT_PACKET_RECV);
 
-	if_tun_compat_layer(ctx, pkt, false);
-	rc = pppoat_io_write_sync(ctx->itc_fd, pkt->pkt_data, pkt->pkt_size);
+	if_tun_compat_layer(ctx, pkt_in, false);
+	rc = pppoat_io_write_sync(ctx->itc_fd, pkt_in->pkt_data,
+				  pkt_in->pkt_size);
 	if (rc == 0)
-		pppoat_packet_put(mod->m_pkts, pkt);
+		pppoat_packet_put(mod->m_pkts, pkt_in);
 
+	*pkt_out = NULL;
 	return rc;
 }
 
@@ -199,12 +186,13 @@ static size_t if_tap_mtu(struct pppoat_module *mod)
 }
 
 static struct pppoat_module_ops if_tun_ops = {
-	.mop_init = &if_tun_init,
-	.mop_fini = &if_tuntap_fini,
-	.mop_run  = &if_tuntap_run,
-	.mop_stop = &if_tuntap_stop,
-	.mop_recv = &if_tuntap_recv,
-	.mop_mtu  = &if_tun_mtu,
+	.mop_init        = &if_tun_init,
+	.mop_fini        = &if_tuntap_fini,
+	.mop_run         = &if_tuntap_run,
+	.mop_stop        = &if_tuntap_stop,
+	.mop_pkt_get     = &if_tuntap_pkt_get,
+	.mop_pkt_process = &if_tuntap_pkt_process,
+	.mop_mtu         = &if_tun_mtu,
 };
 
 struct pppoat_module_impl pppoat_module_if_tun = {
@@ -215,12 +203,13 @@ struct pppoat_module_impl pppoat_module_if_tun = {
 };
 
 static struct pppoat_module_ops if_tap_ops = {
-	.mop_init = &if_tap_init,
-	.mop_fini = &if_tuntap_fini,
-	.mop_run  = &if_tuntap_run,
-	.mop_stop = &if_tuntap_stop,
-	.mop_recv = &if_tuntap_recv,
-	.mop_mtu  = &if_tap_mtu,
+	.mop_init        = &if_tap_init,
+	.mop_fini        = &if_tuntap_fini,
+	.mop_run         = &if_tuntap_run,
+	.mop_stop        = &if_tuntap_stop,
+	.mop_pkt_get     = &if_tuntap_pkt_get,
+	.mop_pkt_process = &if_tuntap_pkt_process,
+	.mop_mtu         = &if_tap_mtu,
 };
 
 struct pppoat_module_impl pppoat_module_if_tap = {
