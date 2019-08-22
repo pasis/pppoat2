@@ -29,7 +29,6 @@
 #include "misc.h"	/* imply */
 #include "module.h"
 #include "packet.h"
-#include "pipeline.h"
 #include "queue.h"
 #include "sem.h"
 #include "thread.h"
@@ -72,6 +71,8 @@ struct tp_xmpp_ctx {
 	struct pppoat_module    *txc_module;
 	struct pppoat_thread     txc_thread;
 	struct pppoat_queue      txc_send_q;
+	struct pppoat_queue      txc_recv_q;
+	struct pppoat_semaphore  txc_recv_sem;
 	struct pppoat_semaphore  txc_stop_sem;
 	bool                     txc_stopping;
 	bool                     txc_connected;
@@ -170,8 +171,11 @@ static int tp_xmpp_init(struct pppoat_module *mod, struct pppoat_conf *conf)
 
 	rc = pppoat_queue_init(&ctx->txc_send_q);
 	PPPOAT_ASSERT(rc == 0); /* XXX */
+	rc = pppoat_queue_init(&ctx->txc_recv_q);
+	PPPOAT_ASSERT(rc == 0); /* XXX */
 	rc = pppoat_thread_init(&ctx->txc_thread, &tp_xmpp_worker);
 	PPPOAT_ASSERT(rc == 0); /* XXX */
+	pppoat_semaphore_init(&ctx->txc_recv_sem, 0);
 	pppoat_semaphore_init(&ctx->txc_stop_sem, 0);
 
 	xmpp_initialize();
@@ -194,7 +198,9 @@ static void tp_xmpp_fini(struct pppoat_module *mod)
 	xmpp_ctx_free(ctx->txc_xmpp_ctx);
 	xmpp_shutdown();
 	pppoat_semaphore_fini(&ctx->txc_stop_sem);
+	pppoat_semaphore_fini(&ctx->txc_recv_sem);
 	pppoat_thread_fini(&ctx->txc_thread);
+	pppoat_queue_fini(&ctx->txc_recv_q);
 	pppoat_queue_fini(&ctx->txc_send_q);
 	tp_xmpp_conf_fini(ctx);
 	pppoat_free(ctx);
@@ -282,15 +288,31 @@ static int tp_xmpp_stop(struct pppoat_module *mod)
 	return rc;
 }
 
-static int tp_xmpp_recv(struct pppoat_module *mod, struct pppoat_packet *pkt)
+static int tp_xmpp_pkt_get(struct pppoat_module  *mod,
+			   struct pppoat_packet **pkt)
+{
+	struct tp_xmpp_ctx   *ctx = mod->m_userdata;
+
+	pppoat_semaphore_wait(&ctx->txc_recv_sem);
+	*pkt = pppoat_queue_dequeue(&ctx->txc_recv_q);
+	if (*pkt != NULL)
+		(*pkt)->pkt_type = PPPOAT_PACKET_RECV;
+
+	return 0;
+}
+
+static int tp_xmpp_pkt_process(struct pppoat_module  *mod,
+			       struct pppoat_packet  *pkt_in,
+			       struct pppoat_packet **pkt_out)
 {
 	struct tp_xmpp_ctx *ctx = mod->m_userdata;
 
 	PPPOAT_ASSERT(tp_xmpp_ctx_invariant(ctx));
-	PPPOAT_ASSERT(pkt->pkt_type == PPPOAT_PACKET_SEND);
+	PPPOAT_ASSERT(pkt_in->pkt_type == PPPOAT_PACKET_SEND);
 
-	pppoat_queue_enqueue(&ctx->txc_send_q, pkt);
+	pppoat_queue_enqueue(&ctx->txc_send_q, pkt_in);
 
+	*pkt_out = NULL;
 	return 0;
 }
 
@@ -300,12 +322,13 @@ static size_t tp_xmpp_mtu(struct pppoat_module *mod)
 }
 
 static struct pppoat_module_ops tp_xmpp_ops = {
-	.mop_init = &tp_xmpp_init,
-	.mop_fini = &tp_xmpp_fini,
-	.mop_run  = &tp_xmpp_run,
-	.mop_stop = &tp_xmpp_stop,
-	.mop_recv = &tp_xmpp_recv,
-	.mop_mtu  = &tp_xmpp_mtu,
+	.mop_init        = &tp_xmpp_init,
+	.mop_fini        = &tp_xmpp_fini,
+	.mop_run         = &tp_xmpp_run,
+	.mop_stop        = &tp_xmpp_stop,
+	.mop_pkt_get     = &tp_xmpp_pkt_get,
+	.mop_pkt_process = &tp_xmpp_pkt_process,
+	.mop_mtu         = &tp_xmpp_mtu,
 };
 
 struct pppoat_module_impl pppoat_module_tp_xmpp = {
@@ -495,12 +518,9 @@ static int tp_xmpp_message_handler(xmpp_conn_t * const   conn,
 
 	xmpp_free(ctx->txc_xmpp_ctx, body);
 
-	rc = pppoat_pipeline_packet_recv(ctx->txc_module->m_pipeline,
-					 ctx->txc_module, pkt);
-	if (rc != 0) {
-		pppoat_error("xmpp", "Lost an incoming packet.");
-		pppoat_packet_put(ctx->txc_module->m_pkts, pkt);
-	}
+	pppoat_queue_enqueue(&ctx->txc_recv_q, pkt);
+	pppoat_semaphore_post(&ctx->txc_recv_sem);
+
 	return 1;
 }
 

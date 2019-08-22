@@ -52,12 +52,12 @@ extern struct pppoat_module_impl pppoat_module_tp_xmpp;
 /* Array of all supported modules. */
 struct pppoat_module_impl *pppoat_modules[] = {
 	&pppoat_module_if_pppd,
-//	&pppoat_module_if_stdio,
+	&pppoat_module_if_stdio,
 	&pppoat_module_if_tun,
 	&pppoat_module_if_tap,
 	&pppoat_module_tp_udp,
 #ifdef HAVE_MODULE_XMPP
-//	&pppoat_module_tp_xmpp,
+	&pppoat_module_tp_xmpp,
 #endif
 };
 
