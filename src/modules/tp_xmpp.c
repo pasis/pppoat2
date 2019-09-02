@@ -189,6 +189,15 @@ static int tp_xmpp_init(struct pppoat_module *mod, struct pppoat_conf *conf)
 	return 0;
 }
 
+static void tp_xmpp_queue_flush(struct pppoat_queue *q,
+				struct pppoat_module *mod)
+{
+	struct pppoat_packet *pkt;
+
+	while ((pkt = pppoat_queue_dequeue(q)) != NULL)
+		pppoat_packet_put(mod->m_pkts, pkt);
+}
+
 static void tp_xmpp_fini(struct pppoat_module *mod)
 {
 	struct tp_xmpp_ctx *ctx = mod->m_userdata;
@@ -200,6 +209,8 @@ static void tp_xmpp_fini(struct pppoat_module *mod)
 	pppoat_semaphore_fini(&ctx->txc_stop_sem);
 	pppoat_semaphore_fini(&ctx->txc_recv_sem);
 	pppoat_thread_fini(&ctx->txc_thread);
+	tp_xmpp_queue_flush(&ctx->txc_recv_q, mod);
+	tp_xmpp_queue_flush(&ctx->txc_send_q, mod);
 	pppoat_queue_fini(&ctx->txc_recv_q);
 	pppoat_queue_fini(&ctx->txc_send_q);
 	tp_xmpp_conf_fini(ctx);
