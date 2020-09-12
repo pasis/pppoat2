@@ -80,9 +80,19 @@ int pppoat_thread_join(struct pppoat_thread *thread)
 	rc = rc == 0 ? 0 : P_ERR(-rc);
 
 	PPPOAT_ASSERT(imply(rc == 0,
-			    retval ==  NULL || retval == PTHREAD_CANCELED));
+			    retval == NULL || retval == PTHREAD_CANCELED));
 	if (rc == 0 && retval == PTHREAD_CANCELED)
 		pppoat_debug("thread", "Thread %p was cancelled", thread);
+
+	return rc;
+}
+
+int pppoat_thread_cancel(struct pppoat_thread *thread)
+{
+	int rc;
+
+	rc = pthread_cancel(thread->t_thread);
+	rc = rc == 0 ? 0 : P_ERR(-rc);
 
 	return rc;
 }

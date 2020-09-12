@@ -39,5 +39,6 @@ void pppoat_thread_fini(struct pppoat_thread *thread);
 
 int pppoat_thread_start(struct pppoat_thread *thread);
 int pppoat_thread_join(struct pppoat_thread *thread);
+int pppoat_thread_cancel(struct pppoat_thread *thread);
 
 #endif /* __PPPOAT_THREAD_H__ */
