@@ -27,6 +27,8 @@
 #include <unistd.h>
 #include <fcntl.h>
 
+#define IO_CLOSE_TRIES_MAX 5
+
 bool pppoat_io_error_is_recoverable(int error)
 {
 	return error == -EWOULDBLOCK ||
@@ -93,6 +95,20 @@ int pppoat_io_write_sync(int fd, const void *buf, size_t len)
 		}
 	} while (rc == 0 && nlen > 0);
 
+	return rc;
+}
+
+int pppoat_io_close(int fd)
+{
+	int iter = 0;
+	int rc;
+
+	do {
+		++iter;
+		rc = close(fd);
+	} while (rc == -1 && errno == EINTR && iter < IO_CLOSE_TRIES_MAX);
+
+	rc = rc < 0 ? P_ERR(-errno) : 0;
 	return rc;
 }
 

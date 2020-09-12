@@ -28,6 +28,8 @@ bool pppoat_io_error_is_recoverable(int error);
 
 int pppoat_io_write_sync(int fd, const void *buf, size_t len);
 
+int pppoat_io_close(int fd);
+
 int pppoat_io_select(int maxfd, fd_set *rfds, fd_set *wfds);
 int pppoat_io_select_single_read(int fd);
 int pppoat_io_select_single_write(int fd);
