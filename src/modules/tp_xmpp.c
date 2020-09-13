@@ -444,6 +444,12 @@ static int tp_xmpp_conn_reconnect_timer_cb(xmpp_conn_t * const conn,
 
 static void tp_xmpp_conn_reconnect(struct tp_xmpp_ctx *ctx)
 {
+	/*
+	 * TODO: rewrite with global timed handlers which appeared in
+	 * libstrophe-0.10. Ordinary timed handlers are not fired when
+	 * the connection is not connected. Therefore, they're not
+	 * suitable for reconnection logic.
+	 */
 	xmpp_timed_handler_delete(ctx->txc_xmpp_conn,
 				  &tp_xmpp_conn_reconnect_timer_cb);
 	xmpp_timed_handler_add(ctx->txc_xmpp_conn,
