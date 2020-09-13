@@ -82,6 +82,7 @@ struct tp_xmpp_ctx {
 	char                    *txc_passwd;
 	char                    *txc_remote;
 	bool                     txc_is_server;
+	uint32_t                 txc_id_cnt;
 	uint32_t                 txc_magic;
 };
 
@@ -182,6 +183,7 @@ static int tp_xmpp_init(struct pppoat_module *mod, struct pppoat_conf *conf)
 	ctx->txc_xmpp_ctx = xmpp_ctx_new(&tp_xmpp_mem, &tp_xmpp_log);
 	PPPOAT_ASSERT(ctx->txc_xmpp_ctx != NULL); /* XXX */
 
+	ctx->txc_id_cnt = 0;
 	ctx->txc_magic  = PPPOAT_MODULE_TP_XMPP_MAGIC;
 	ctx->txc_module = mod;
 	mod->m_userdata = ctx;
@@ -540,26 +542,33 @@ static int tp_xmpp_message_handler(xmpp_conn_t * const   conn,
 
 enum tp_xmpp_id_t {
 	XMPP_ID_UNKNOWN,
-	XMPP_ID_SEND_MESSAGE,
+	XMPP_ID_MESSAGE,
+	XMPP_ID_PRESENCE,
+	XMPP_ID_IQ,
 };
 
 enum {
-	XMPP_ID_LEN_MAX = 8,
+	XMPP_ID_LEN_MAX = 13,
 };
 
-static char *tp_xmpp_id(struct tp_xmpp_ctx *ctx, enum tp_xmpp_id_t type)
+static void tp_xmpp_id(struct tp_xmpp_ctx *ctx,
+		       enum tp_xmpp_id_t   type,
+		       char               *buf,
+		       size_t              buflen)
+{
+	int rc;
+
+	rc = snprintf(buf, buflen, "id%u", (unsigned)(ctx->txc_id_cnt++));
+	PPPOAT_ASSERT(rc < buflen);
+}
+
+static char *tp_xmpp_id_alloc(struct tp_xmpp_ctx *ctx, enum tp_xmpp_id_t type)
 {
 	char *id;
-	int   rc;
-
-	static unsigned int counter = 0;
-
-	/* TODO Implement this function in better way. */
 
 	id = pppoat_alloc(XMPP_ID_LEN_MAX);
 	if (id != NULL) {
-		rc = snprintf(id, XMPP_ID_LEN_MAX, "id_%u", counter++);
-		PPPOAT_ASSERT(rc < XMPP_ID_LEN_MAX);
+		tp_xmpp_id(ctx, type, id, XMPP_ID_LEN_MAX);
 	}
 	return id;
 }
@@ -571,7 +580,7 @@ static int tp_xmpp_send(struct tp_xmpp_ctx *ctx, struct pppoat_packet *pkt)
 	char          *base64;
 	int            rc;
 
-	id = tp_xmpp_id(ctx, XMPP_ID_SEND_MESSAGE);
+	id = tp_xmpp_id_alloc(ctx, XMPP_ID_MESSAGE);
 	PPPOAT_ASSERT(id != NULL); /* XXX */
 	msg = xmpp_message_new(ctx->txc_xmpp_ctx, "chat", ctx->txc_remote, id);
 	PPPOAT_ASSERT(msg != NULL); /* XXX */
