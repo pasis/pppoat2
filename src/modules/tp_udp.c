@@ -23,6 +23,7 @@
 #include "io.h"
 #include "magic.h"
 #include "memory.h"
+#include "misc.h"
 #include "module.h"
 #include "packet.h"
 
@@ -173,18 +174,10 @@ static int tp_udp_init(struct pppoat_module *mod, struct pppoat_conf *conf)
 	if (rc != 0)
 		goto err_conf_fini;
 
-	rc = tp_udp_sock_new(ctx->uc_sport, &ctx->uc_sock);
-	if (rc != 0)
-		goto err_ainfo_put;
-
-	(void)pppoat_io_fd_blocking_set(ctx->uc_sock, false);
-
 	mod->m_userdata = ctx;
 
 	return 0;
 
-err_ainfo_put:
-	tp_udp_ainfo_put(ctx->uc_ainfo);
 err_conf_fini:
 	tp_udp_conf_fini(ctx);
 err_ctx_free:
@@ -198,7 +191,6 @@ static void tp_udp_fini(struct pppoat_module *mod)
 
 	PPPOAT_ASSERT(tp_udp_ctx_invariant(ctx));
 
-	(void)close(ctx->uc_sock);
 	tp_udp_ainfo_put(ctx->uc_ainfo);
 	tp_udp_conf_fini(ctx);
 	pppoat_free(ctx);
@@ -207,15 +199,27 @@ static void tp_udp_fini(struct pppoat_module *mod)
 static int tp_udp_run(struct pppoat_module *mod)
 {
 	struct tp_udp_ctx *ctx = mod->m_userdata;
+	int                rc;
 
 	PPPOAT_ASSERT(tp_udp_ctx_invariant(ctx));
 
-	return 0;
+	rc = tp_udp_sock_new(ctx->uc_sport, &ctx->uc_sock);
+	if (rc == 0) {
+		(void)pppoat_io_fd_blocking_set(ctx->uc_sock, false);
+	}
+	return rc;
 }
 
 static int tp_udp_stop(struct pppoat_module *mod)
 {
-	return 0;
+	struct tp_udp_ctx *ctx = mod->m_userdata;
+	int                rc;
+
+	pppoat_debug("udp", "stopping udp module");
+
+	rc = pppoat_io_close(ctx->uc_sock);
+
+	return rc;
 }
 
 static int tp_udp_pkt_get(struct pppoat_module  *mod,
@@ -239,6 +243,7 @@ static int tp_udp_pkt_get(struct pppoat_module  *mod,
 		rlen = recv(sock, pkt2->pkt_data, pkt2->pkt_size, 0);
 		if (rlen < 0 && !pppoat_io_error_is_recoverable(-errno))
 			rc = P_ERR(-errno);
+		rc = rc ?: (rlen <= 0 ? -EAGAIN : 0); /* XXX */
 		if (rlen > 0)
 			pkt2->pkt_size = rlen;
 	}
@@ -278,22 +283,26 @@ static int tp_udp_buf_send(int              sock,
 	return rc;
 }
 
-static int tp_udp_pkt_process(struct pppoat_module  *mod,
-			      struct pppoat_packet  *pkt_in,
-			      struct pppoat_packet **pkt_out)
+static int tp_udp_process(struct pppoat_module  *mod,
+			  struct pppoat_packet  *pkt,
+			  struct pppoat_packet **next)
 {
 	struct tp_udp_ctx *ctx = mod->m_userdata;
 	int                rc;
 
 	PPPOAT_ASSERT(tp_udp_ctx_invariant(ctx));
-	PPPOAT_ASSERT(pkt_in->pkt_type == PPPOAT_PACKET_SEND);
+	PPPOAT_ASSERT(imply(pkt != NULL, pkt->pkt_type == PPPOAT_PACKET_SEND));
 
-	rc = tp_udp_buf_send(ctx->uc_sock, ctx->uc_ainfo, pkt_in->pkt_data,
-			     pkt_in->pkt_size);
+	if (pkt == NULL) {
+		return tp_udp_pkt_get(mod, next);
+	}
+
+	rc = tp_udp_buf_send(ctx->uc_sock, ctx->uc_ainfo, pkt->pkt_data,
+			     pkt->pkt_size);
 	if (rc == 0)
-		pppoat_packet_put(mod->m_pkts, pkt_in);
+		pppoat_packet_put(mod->m_pkts, pkt);
 
-	*pkt_out = NULL;
+	*next = NULL;
 	return rc;
 }
 
@@ -303,13 +312,12 @@ static size_t tp_udp_mtu(struct pppoat_module *mod)
 }
 
 static struct pppoat_module_ops tp_udp_ops = {
-	.mop_init        = &tp_udp_init,
-	.mop_fini        = &tp_udp_fini,
-	.mop_run         = &tp_udp_run,
-	.mop_stop        = &tp_udp_stop,
-	.mop_pkt_get     = &tp_udp_pkt_get,
-	.mop_pkt_process = &tp_udp_pkt_process,
-	.mop_mtu         = &tp_udp_mtu,
+	.mop_init    = &tp_udp_init,
+	.mop_fini    = &tp_udp_fini,
+	.mop_run     = &tp_udp_run,
+	.mop_stop    = &tp_udp_stop,
+	.mop_process = &tp_udp_process,
+	.mop_mtu     = &tp_udp_mtu,
 };
 
 struct pppoat_module_impl pppoat_module_tp_udp = {
@@ -317,4 +325,5 @@ struct pppoat_module_impl pppoat_module_tp_udp = {
 	.mod_descr = "UDP transport",
 	.mod_type  = PPPOAT_MODULE_TRANSPORT,
 	.mod_ops   = &tp_udp_ops,
+	.mod_props = PPPOAT_MODULE_BLOCKING,
 };

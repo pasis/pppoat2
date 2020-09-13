@@ -23,6 +23,7 @@
 #include "io.h"
 #include "magic.h"
 #include "memory.h"
+#include "misc.h"
 #include "module.h"
 #include "packet.h"
 
@@ -155,23 +156,25 @@ static int if_tuntap_pkt_get(struct pppoat_module  *mod,
 	return rc;
 }
 
-static int if_tuntap_pkt_process(struct pppoat_module  *mod,
-				 struct pppoat_packet  *pkt_in,
-				 struct pppoat_packet **pkt_out)
+static int if_tuntap_process(struct pppoat_module  *mod,
+			     struct pppoat_packet  *pkt,
+			     struct pppoat_packet **next)
 {
 	struct if_tuntap_ctx *ctx = mod->m_userdata;
 	int                   rc;
 
 	PPPOAT_ASSERT(if_tuntap_ctx_invariant(ctx));
-	PPPOAT_ASSERT(pkt_in->pkt_type == PPPOAT_PACKET_RECV);
+	PPPOAT_ASSERT(imply(pkt != NULL, pkt->pkt_type == PPPOAT_PACKET_RECV));
 
-	if_tun_compat_layer(ctx, pkt_in, false);
-	rc = pppoat_io_write_sync(ctx->itc_fd, pkt_in->pkt_data,
-				  pkt_in->pkt_size);
+	if (pkt == NULL)
+		return if_tuntap_pkt_get(mod, next);
+
+	if_tun_compat_layer(ctx, pkt, false);
+	rc = pppoat_io_write_sync(ctx->itc_fd, pkt->pkt_data, pkt->pkt_size);
 	if (rc == 0)
-		pppoat_packet_put(mod->m_pkts, pkt_in);
+		pppoat_packet_put(mod->m_pkts, pkt);
 
-	*pkt_out = NULL;
+	*next = NULL;
 	return rc;
 }
 
@@ -186,13 +189,12 @@ static size_t if_tap_mtu(struct pppoat_module *mod)
 }
 
 static struct pppoat_module_ops if_tun_ops = {
-	.mop_init        = &if_tun_init,
-	.mop_fini        = &if_tuntap_fini,
-	.mop_run         = &if_tuntap_run,
-	.mop_stop        = &if_tuntap_stop,
-	.mop_pkt_get     = &if_tuntap_pkt_get,
-	.mop_pkt_process = &if_tuntap_pkt_process,
-	.mop_mtu         = &if_tun_mtu,
+	.mop_init    = &if_tun_init,
+	.mop_fini    = &if_tuntap_fini,
+	.mop_run     = &if_tuntap_run,
+	.mop_stop    = &if_tuntap_stop,
+	.mop_process = &if_tuntap_process,
+	.mop_mtu     = &if_tun_mtu,
 };
 
 struct pppoat_module_impl pppoat_module_if_tun = {
@@ -200,16 +202,16 @@ struct pppoat_module_impl pppoat_module_if_tun = {
 	.mod_descr = "TUN interface",
 	.mod_type  = PPPOAT_MODULE_INTERFACE,
 	.mod_ops   = &if_tun_ops,
+	.mod_props = PPPOAT_MODULE_BLOCKING,
 };
 
 static struct pppoat_module_ops if_tap_ops = {
-	.mop_init        = &if_tap_init,
-	.mop_fini        = &if_tuntap_fini,
-	.mop_run         = &if_tuntap_run,
-	.mop_stop        = &if_tuntap_stop,
-	.mop_pkt_get     = &if_tuntap_pkt_get,
-	.mop_pkt_process = &if_tuntap_pkt_process,
-	.mop_mtu         = &if_tap_mtu,
+	.mop_init    = &if_tap_init,
+	.mop_fini    = &if_tuntap_fini,
+	.mop_run     = &if_tuntap_run,
+	.mop_stop    = &if_tuntap_stop,
+	.mop_process = &if_tuntap_process,
+	.mop_mtu     = &if_tap_mtu,
 };
 
 struct pppoat_module_impl pppoat_module_if_tap = {
@@ -217,6 +219,7 @@ struct pppoat_module_impl pppoat_module_if_tap = {
 	.mod_descr = "TAP interface",
 	.mod_type  = PPPOAT_MODULE_INTERFACE,
 	.mod_ops   = &if_tap_ops,
+	.mod_props = PPPOAT_MODULE_BLOCKING,
 };
 
 /* --------------------------------------------------------------------------

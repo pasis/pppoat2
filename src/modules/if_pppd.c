@@ -158,6 +158,7 @@ static int if_pppd_run(struct pppoat_module *mod)
 			     ctx->ipc_pppd_path,
 			     ctx->ipc_ip == NULL ? "" : ctx->ipc_ip);
 		pppoat_log_flush();
+		(void)setsid();
 		rc = execl(ctx->ipc_pppd_path, ctx->ipc_pppd_path, "nodetach",
 			   "noauth", "notty", "passive", ctx->ipc_ip, NULL);
 		pppoat_error("pppd", "Failed to execute pppd, rc=%d errno=%d",
@@ -186,6 +187,7 @@ static int if_pppd_stop(struct pppoat_module *mod)
 	int                 rc;
 
 	PPPOAT_ASSERT(if_pppd_ctx_invariant(ctx));
+	pppoat_debug("pppd", "stopping pppd module");
 
 	rc = kill(ctx->ipc_pppd_pid, SIGTERM);
 	PPPOAT_ASSERT(rc == 0); /* XXX */
@@ -226,7 +228,7 @@ static int if_pppd_pkt_get(struct pppoat_module  *mod,
 			     -errno : P_ERR(-errno);
 		}
 		if (rlen == 0)
-			rc = P_ERR(-EIO);
+			rc = -EAGAIN;
 		if (rlen > 0)
 			pkt2->pkt_size = rlen;
 	}
@@ -240,22 +242,24 @@ static int if_pppd_pkt_get(struct pppoat_module  *mod,
 	return rc;
 }
 
-static int if_pppd_pkt_process(struct pppoat_module  *mod,
-			       struct pppoat_packet  *pkt_in,
-			       struct pppoat_packet **pkt_out)
+static int if_pppd_process(struct pppoat_module  *mod,
+			   struct pppoat_packet  *pkt,
+			   struct pppoat_packet **next)
 {
 	struct if_pppd_ctx *ctx = mod->m_userdata;
 	int                 rc;
 
 	PPPOAT_ASSERT(if_pppd_ctx_invariant(ctx));
-	PPPOAT_ASSERT(pkt_in->pkt_type == PPPOAT_PACKET_RECV);
+	PPPOAT_ASSERT(imply(pkt != NULL, pkt->pkt_type == PPPOAT_PACKET_RECV));
 
-	rc = pppoat_io_write_sync(ctx->ipc_wr, pkt_in->pkt_data,
-				  pkt_in->pkt_size);
+	if (pkt == NULL)
+		return if_pppd_pkt_get(mod, next);
+
+	rc = pppoat_io_write_sync(ctx->ipc_wr, pkt->pkt_data, pkt->pkt_size);
 	if (rc == 0)
-		pppoat_packet_put(mod->m_pkts, pkt_in);
+		pppoat_packet_put(mod->m_pkts, pkt);
 
-	*pkt_out = NULL;
+	*next = NULL;
 	return rc;
 }
 
@@ -265,13 +269,12 @@ static size_t if_pppd_mtu(struct pppoat_module *mod)
 }
 
 static struct pppoat_module_ops if_pppd_ops = {
-	.mop_init        = &if_pppd_init,
-	.mop_fini        = &if_pppd_fini,
-	.mop_run         = &if_pppd_run,
-	.mop_stop        = &if_pppd_stop,
-	.mop_pkt_get     = &if_pppd_pkt_get,
-	.mop_pkt_process = &if_pppd_pkt_process,
-	.mop_mtu         = &if_pppd_mtu,
+	.mop_init    = &if_pppd_init,
+	.mop_fini    = &if_pppd_fini,
+	.mop_run     = &if_pppd_run,
+	.mop_stop    = &if_pppd_stop,
+	.mop_process = &if_pppd_process,
+	.mop_mtu     = &if_pppd_mtu,
 };
 
 struct pppoat_module_impl pppoat_module_if_pppd = {
@@ -279,4 +282,5 @@ struct pppoat_module_impl pppoat_module_if_pppd = {
 	.mod_descr = "PPP interface via pppd",
 	.mod_type  = PPPOAT_MODULE_INTERFACE,
 	.mod_ops   = &if_pppd_ops,
+	.mod_props = PPPOAT_MODULE_BLOCKING,
 };

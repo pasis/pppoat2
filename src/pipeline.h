@@ -54,7 +54,7 @@
  * and a module should decide what events make the pipeline to continue polling
  * the paused module.
  *
- * Usual usecase is when interface and transport produce packets and they
+ * Common usecase is when interface and transport produce packets and they
  * traverse to the opposite side:
  *
  * @verbatim
@@ -72,17 +72,17 @@
 /**
  * Detailed level design.
  *
- * Module interface provides a single interface for the pipeline needs:
+ * Module interface provides a single interface for the pipeline:
  *
  * @verbatim
  * int pppoat_module_ops::mop_process(struct pppoat_packet *pkt_in,
  * 				      struct pppoat_packet **pkt_out);
  * @endverbatim
  *
- * pkt_in and/or can be an empty packet which is NULL. Empty pkt_in means that
- * pipeline polls for a new packet if the module has data to insert to the
- * pipeline. Empty pkt_out informs that the module doesn't have data and
- * the pipeline should stop polling it until an event occurs.
+ * pkt_in and/or pkt_out can be an empty packet which is NULL. Empty pkt_in
+ * means that pipeline polls for a new packet when the module has no data to
+ * insert to the pipeline. Empty pkt_out informs that the module doesn't have
+ * data and the pipeline should stop polling it until an event occurs.
  *
  * If pkt_in is not empty, module must perform its logic on the packet
  * and either return it via pkt_out or consume it. If the packet is consumed,
@@ -96,8 +96,10 @@ struct pppoat_packet;
 
 struct pppoat_pipeline {
 	struct pppoat_list   pl_modules;
-	struct pppoat_thread pl_thread_send;
-	struct pppoat_thread pl_thread_recv;
+	struct pppoat_thread pl_thread;
+	struct pppoat_thread pl_thread_blk1;
+	struct pppoat_thread pl_thread_blk2;
+	size_t               pl_modules_nr;
 	bool                 pl_running;
 };
 

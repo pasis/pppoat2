@@ -312,18 +312,21 @@ static int tp_xmpp_pkt_get(struct pppoat_module  *mod,
 	return 0;
 }
 
-static int tp_xmpp_pkt_process(struct pppoat_module  *mod,
-			       struct pppoat_packet  *pkt_in,
-			       struct pppoat_packet **pkt_out)
+static int tp_xmpp_process(struct pppoat_module  *mod,
+			   struct pppoat_packet  *pkt,
+			   struct pppoat_packet **next)
 {
 	struct tp_xmpp_ctx *ctx = mod->m_userdata;
 
 	PPPOAT_ASSERT(tp_xmpp_ctx_invariant(ctx));
-	PPPOAT_ASSERT(pkt_in->pkt_type == PPPOAT_PACKET_SEND);
+	PPPOAT_ASSERT(imply(pkt != NULL, pkt->pkt_type == PPPOAT_PACKET_SEND));
 
-	pppoat_queue_enqueue(&ctx->txc_send_q, pkt_in);
+	if (pkt == NULL)
+		return tp_xmpp_pkt_get(mod, next);
 
-	*pkt_out = NULL;
+	pppoat_queue_enqueue(&ctx->txc_send_q, pkt);
+
+	*next = NULL;
 	return 0;
 }
 
@@ -333,13 +336,12 @@ static size_t tp_xmpp_mtu(struct pppoat_module *mod)
 }
 
 static struct pppoat_module_ops tp_xmpp_ops = {
-	.mop_init        = &tp_xmpp_init,
-	.mop_fini        = &tp_xmpp_fini,
-	.mop_run         = &tp_xmpp_run,
-	.mop_stop        = &tp_xmpp_stop,
-	.mop_pkt_get     = &tp_xmpp_pkt_get,
-	.mop_pkt_process = &tp_xmpp_pkt_process,
-	.mop_mtu         = &tp_xmpp_mtu,
+	.mop_init    = &tp_xmpp_init,
+	.mop_fini    = &tp_xmpp_fini,
+	.mop_run     = &tp_xmpp_run,
+	.mop_stop    = &tp_xmpp_stop,
+	.mop_process = &tp_xmpp_process,
+	.mop_mtu     = &tp_xmpp_mtu,
 };
 
 struct pppoat_module_impl pppoat_module_tp_xmpp = {
@@ -347,6 +349,7 @@ struct pppoat_module_impl pppoat_module_tp_xmpp = {
 	.mod_descr = "XMPP transport",
 	.mod_type  = PPPOAT_MODULE_TRANSPORT,
 	.mod_ops   = &tp_xmpp_ops,
+	.mod_props = PPPOAT_MODULE_BLOCKING,
 };
 
 /* --------------------------------------------------------------------------

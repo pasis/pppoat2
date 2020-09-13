@@ -22,6 +22,7 @@
 #include "conf.h"
 #include "io.h"
 #include "memory.h"
+#include "misc.h"
 #include "module.h"
 #include "packet.h"
 
@@ -147,22 +148,24 @@ static int if_fd_pkt_get(struct pppoat_module  *mod,
 	return rc;
 }
 
-static int if_fd_pkt_process(struct pppoat_module  *mod,
-			     struct pppoat_packet  *pkt_in,
-			     struct pppoat_packet **pkt_out)
+static int if_fd_process(struct pppoat_module  *mod,
+			 struct pppoat_packet  *pkt,
+			 struct pppoat_packet **next)
 {
 	struct if_fd_ctx *ctx = mod->m_userdata;
 	int               rc;
 
 	PPPOAT_ASSERT(if_fd_ctx_invariant(ctx));
-	PPPOAT_ASSERT(pkt_in->pkt_type == PPPOAT_PACKET_RECV);
+	PPPOAT_ASSERT(imply(pkt != NULL, pkt->pkt_type == PPPOAT_PACKET_RECV));
 
-	rc = pppoat_io_write_sync(ctx->ifc_wr, pkt_in->pkt_data,
-				  pkt_in->pkt_size);
+	if (pkt == NULL)
+		return if_fd_pkt_get(mod, next);
+
+	rc = pppoat_io_write_sync(ctx->ifc_wr, pkt->pkt_data, pkt->pkt_size);
 	if (rc == 0)
-		pppoat_packet_put(mod->m_pkts, pkt_in);
+		pppoat_packet_put(mod->m_pkts, pkt);
 
-	*pkt_out = NULL;
+	*next = NULL;
 	return rc;
 }
 
@@ -172,13 +175,12 @@ static size_t if_fd_mtu(struct pppoat_module *mod)
 }
 
 static struct pppoat_module_ops if_stdio_ops = {
-	.mop_init        = &if_stdio_init,
-	.mop_fini        = &if_stdio_fini,
-	.mop_run         = &if_fd_run,
-	.mop_stop        = &if_fd_stop,
-	.mop_pkt_get     = &if_fd_pkt_get,
-	.mop_pkt_process = &if_fd_pkt_process,
-	.mop_mtu         = &if_fd_mtu,
+	.mop_init    = &if_stdio_init,
+	.mop_fini    = &if_stdio_fini,
+	.mop_run     = &if_fd_run,
+	.mop_stop    = &if_fd_stop,
+	.mop_process = &if_fd_process,
+	.mop_mtu     = &if_fd_mtu,
 };
 
 struct pppoat_module_impl pppoat_module_if_stdio = {
@@ -186,4 +188,5 @@ struct pppoat_module_impl pppoat_module_if_stdio = {
 	.mod_descr = "Standard in/out interface",
 	.mod_type  = PPPOAT_MODULE_INTERFACE,
 	.mod_ops   = &if_stdio_ops,
+	.mod_props = PPPOAT_MODULE_BLOCKING,
 };

@@ -30,6 +30,10 @@ struct pppoat_pipeline;
 
 struct pppoat_module;
 
+#define PPPOAT_MODULE_BLOCKING 0x0001
+#define PPPOAT_MODULE_STREAM   0x0002
+#define PPPOAT_MODULE_PACKET   0x0004
+
 enum pppoat_module_type {
 	PPPOAT_MODULE_UNKNOWN,
 	PPPOAT_MODULE_INTERFACE,
@@ -42,11 +46,9 @@ struct pppoat_module_ops {
 	void (*mop_fini)(struct pppoat_module *mod);
 	int (*mop_run)(struct pppoat_module *mod);
 	int (*mop_stop)(struct pppoat_module *mod);
-	int (*mop_pkt_get)(struct pppoat_module  *mod,
-			   struct pppoat_packet **pkt);
-	int (*mop_pkt_process)(struct pppoat_module  *mod,
-			       struct pppoat_packet  *pkt_in,
-			       struct pppoat_packet **pkt_out);
+	int (*mop_process)(struct pppoat_module  *mod,
+			   struct pppoat_packet  *pkt,
+			   struct pppoat_packet **next);
 	size_t (*mop_mtu)(struct pppoat_module *mod);
 };
 
@@ -55,6 +57,7 @@ struct pppoat_module_impl {
 	const char               *mod_descr;
 	enum pppoat_module_type   mod_type;
 	struct pppoat_module_ops *mod_ops;
+	unsigned long             mod_props;
 };
 
 struct pppoat_module {
@@ -62,6 +65,7 @@ struct pppoat_module {
 	struct pppoat_packets           *m_pkts;
 	struct pppoat_list_link          m_link;
 	uint32_t                         m_magic;
+	bool                             m_invert;
 	void                            *m_userdata;
 };
 
@@ -73,14 +77,14 @@ void pppoat_module_fini(struct pppoat_module *mod);
 int pppoat_module_run(struct pppoat_module *mod);
 int pppoat_module_stop(struct pppoat_module *mod);
 
-int pppoat_module_pkt_get(struct pppoat_module  *mod,
-			  struct pppoat_packet **pkt);
-int pppoat_module_pkt_process(struct pppoat_module  *mod,
-			      struct pppoat_packet  *pkt_in,
-			      struct pppoat_packet **pkt_out);
+int pppoat_module_process(struct pppoat_module  *mod,
+			  struct pppoat_packet  *pkt,
+			  struct pppoat_packet **next);
 
 size_t pppoat_module_mtu(struct pppoat_module *mod);
 
 enum pppoat_module_type pppoat_module_type(struct pppoat_module *mod);
+const char *pppoat_module_name(struct pppoat_module *mod);
+bool pppoat_module_is_blocking(struct pppoat_module *mod);
 
 #endif /* __PPPOAT_MODULE_H__ */
