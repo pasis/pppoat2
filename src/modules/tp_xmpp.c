@@ -116,20 +116,20 @@ static const xmpp_log_t tp_xmpp_log;
 
 static void tp_xmpp_worker(struct pppoat_thread *thread);
 static void tp_xmpp_conn_reconnect(struct tp_xmpp_ctx *ctx);
-static void tp_xmpp_conn_handler(xmpp_conn_t * const         conn,
-				 const xmpp_conn_event_t     status,
-				 const int                   error,
-				 xmpp_stream_error_t * const stream_error,
-				 void * const                userdata);
-static int tp_xmpp_message_handler(xmpp_conn_t * const   conn,
-				   xmpp_stanza_t * const stanza,
-				   void * const          userdata);
-static int tp_xmpp_version_handler(xmpp_conn_t * const   conn,
-				   xmpp_stanza_t * const stanza,
-				   void * const          userdata);
-static int tp_xmpp_disco_handler(xmpp_conn_t * const   conn,
-				 xmpp_stanza_t * const stanza,
-				 void * const          userdata);
+static void tp_xmpp_conn_handler(xmpp_conn_t         *conn,
+				 xmpp_conn_event_t    status,
+				 int                  error,
+				 xmpp_stream_error_t *stream_error,
+				 void                *userdata);
+static int tp_xmpp_message_handler(xmpp_conn_t   *conn,
+				   xmpp_stanza_t *stanza,
+				   void          *userdata);
+static int tp_xmpp_version_handler(xmpp_conn_t   *conn,
+				   xmpp_stanza_t *stanza,
+				   void          *userdata);
+static int tp_xmpp_disco_handler(xmpp_conn_t   *conn,
+				 xmpp_stanza_t *stanza,
+				 void          *userdata);
 static int tp_xmpp_send(struct tp_xmpp_ctx *ctx, struct pppoat_packet *pkt);
 
 static const char *tp_xmpp_sw_name = PACKAGE_NAME;
@@ -389,21 +389,19 @@ struct pppoat_module_impl pppoat_module_tp_xmpp = {
  *  Strophe helpers.
  * -------------------------------------------------------------------------- */
 
-static void *tp_xmpp_mem_alloc(const size_t size, void * const userdata)
+static void *tp_xmpp_mem_alloc(size_t size, void *userdata)
 {
 	(void)userdata;
 	return pppoat_alloc(size);
 }
 
-static void tp_xmpp_mem_free(void *p, void * const userdata)
+static void tp_xmpp_mem_free(void *p, void *userdata)
 {
 	(void)userdata;
 	pppoat_free(p);
 }
 
-static void *tp_xmpp_mem_realloc(void         *p,
-				 const size_t  size,
-				 void * const  userdata)
+static void *tp_xmpp_mem_realloc(void *p, size_t size, void *userdata)
 {
 	(void)userdata;
 	return pppoat_realloc(p, size);
@@ -416,10 +414,10 @@ static const xmpp_mem_t tp_xmpp_mem = {
 	.userdata = NULL,
 };
 
-static void tp_xmpp_log_cb(void                  *userdata,
-			   const xmpp_log_level_t level,
-			   const char * const     area,
-			   const char * const     msg)
+static void tp_xmpp_log_cb(void             *userdata,
+			   xmpp_log_level_t  level,
+			   const char       *area,
+			   const char       *msg)
 {
 	pppoat_log_level_t l = PPPOAT_DEBUG;
 
@@ -461,8 +459,7 @@ static const char *tp_xmpp_conn_event_to_str(xmpp_conn_event_t status)
 	}
 }
 
-static int tp_xmpp_conn_reconnect_timer_cb(xmpp_conn_t * const conn,
-					   void * const        userdata)
+static int tp_xmpp_conn_reconnect_timer_cb(xmpp_conn_t *conn, void *userdata)
 {
 	struct tp_xmpp_ctx *ctx = userdata;
 	int                 rc;
@@ -488,11 +485,11 @@ static void tp_xmpp_conn_reconnect(struct tp_xmpp_ctx *ctx)
 			       XMPP_RECONNECT_PERIOD, ctx);
 }
 
-static void tp_xmpp_conn_handler(xmpp_conn_t * const         conn,
-				 const xmpp_conn_event_t     status,
-				 const int                   error,
-				 xmpp_stream_error_t * const stream_error,
-				 void * const                userdata)
+static void tp_xmpp_conn_handler(xmpp_conn_t         *conn,
+				 xmpp_conn_event_t    status,
+				 int                  error,
+				 xmpp_stream_error_t *stream_error,
+				 void                *userdata)
 {
 	struct tp_xmpp_ctx *ctx = userdata;
 	xmpp_stanza_t      *presence;
@@ -532,9 +529,9 @@ static void tp_xmpp_conn_handler(xmpp_conn_t * const         conn,
 	}
 }
 
-static int tp_xmpp_message_handler(xmpp_conn_t * const   conn,
-				   xmpp_stanza_t * const stanza,
-				   void * const          userdata)
+static int tp_xmpp_message_handler(xmpp_conn_t   *conn,
+				   xmpp_stanza_t *stanza,
+				   void          *userdata)
 {
 	struct tp_xmpp_ctx   *ctx = userdata;
 	struct pppoat_packet *pkt;
@@ -579,9 +576,9 @@ static int tp_xmpp_message_handler(xmpp_conn_t * const   conn,
  *       It will reduce copy-paste.
  */
 
-static int tp_xmpp_version_handler(xmpp_conn_t * const   conn,
-				   xmpp_stanza_t * const stanza,
-				   void * const          userdata)
+static int tp_xmpp_version_handler(xmpp_conn_t   *conn,
+				   xmpp_stanza_t *stanza,
+				   void          *userdata)
 {
 	struct tp_xmpp_ctx *ctx = userdata;
 	xmpp_ctx_t         *xmpp_ctx = ctx->txc_xmpp_ctx;
@@ -642,9 +639,9 @@ quit:
 	return 1;
 }
 
-static int tp_xmpp_disco_handler(xmpp_conn_t * const   conn,
-				 xmpp_stanza_t * const stanza,
-				 void * const          userdata)
+static int tp_xmpp_disco_handler(xmpp_conn_t   *conn,
+				 xmpp_stanza_t *stanza,
+				 void          *userdata)
 {
 	struct tp_xmpp_ctx *ctx = userdata;
 	xmpp_ctx_t         *xmpp_ctx = ctx->txc_xmpp_ctx;
