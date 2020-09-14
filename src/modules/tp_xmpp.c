@@ -102,6 +102,14 @@ enum {
 #define XMPP_NS_XEP_0091 "jabber:x:delay"
 #define XMPP_NS_XEP_0203 "urn:xmpp:delay"
 #define XMPP_NS_XEP_0092 "jabber:iq:version"
+#define XMPP_NS_XEP_0030_INFO "http://jabber.org/protocol/disco#info"
+
+#ifndef PACKAGE_NAME
+#define PACKAGE_NAME "pppoat"
+#endif
+#ifndef PACKAGE_VERSION
+#define PACKAGE_VERSION "0"
+#endif
 
 static const xmpp_mem_t tp_xmpp_mem;
 static const xmpp_log_t tp_xmpp_log;
@@ -119,7 +127,13 @@ static int tp_xmpp_message_handler(xmpp_conn_t * const   conn,
 static int tp_xmpp_version_handler(xmpp_conn_t * const   conn,
 				   xmpp_stanza_t * const stanza,
 				   void * const          userdata);
+static int tp_xmpp_disco_handler(xmpp_conn_t * const   conn,
+				 xmpp_stanza_t * const stanza,
+				 void * const          userdata);
 static int tp_xmpp_send(struct tp_xmpp_ctx *ctx, struct pppoat_packet *pkt);
+
+static const char *tp_xmpp_sw_name = PACKAGE_NAME;
+static const char *tp_xmpp_sw_ver  = PACKAGE_VERSION;
 
 static bool tp_xmpp_ctx_invariant(struct tp_xmpp_ctx *ctx)
 {
@@ -271,6 +285,9 @@ static void tp_xmpp_handlers_register(struct tp_xmpp_ctx *ctx)
 	/* Software Version handler */
 	xmpp_handler_add(ctx->txc_xmpp_conn, tp_xmpp_version_handler,
 			 XMPP_NS_XEP_0092, "iq", "get", ctx);
+	/* Service Discovery handler */
+	xmpp_handler_add(ctx->txc_xmpp_conn, tp_xmpp_disco_handler,
+			 XMPP_NS_XEP_0030_INFO, "iq", "get", ctx);
 }
 
 static int tp_xmpp_run(struct pppoat_module *mod)
@@ -557,6 +574,11 @@ static int tp_xmpp_message_handler(xmpp_conn_t * const   conn,
 	return 1;
 }
 
+/*
+ * TODO: Add function which creates reply IQ stanza from a template.
+ *       It will reduce copy-paste.
+ */
+
 static int tp_xmpp_version_handler(xmpp_conn_t * const   conn,
 				   xmpp_stanza_t * const stanza,
 				   void * const          userdata)
@@ -567,33 +589,20 @@ static int tp_xmpp_version_handler(xmpp_conn_t * const   conn,
 	xmpp_stanza_t      *query;
 	xmpp_stanza_t      *item;
 	xmpp_stanza_t      *text;
-	const char         *sw_name;
-	const char         *sw_version;
 
 	PPPOAT_ASSERT(tp_xmpp_ctx_invariant(ctx));
-
-#ifdef PACKAGE_NAME
-	sw_name = PACKAGE_NAME;
-#else
-	sw_name = "pppoat";
-#endif /* PACKAGE_NAME */
-
-#ifdef PACKAGE_VERSION
-	sw_version = PACKAGE_VERSION;
-#else
-	sw_version = "0";
-#endif /* PACKAGE_VERSION */
 
 	iq = xmpp_stanza_reply(stanza);
 	if (iq == NULL)
 		goto quit;
+	xmpp_stanza_del_attribute(iq, "xmlns");
 	xmpp_stanza_set_type(iq, "result");
 
 	query = xmpp_stanza_new(xmpp_ctx);
 	if (query == NULL)
 		goto quit;
-	xmpp_stanza_set_ns(query, XMPP_NS_XEP_0092);
 	xmpp_stanza_set_name(query, "query");
+	xmpp_stanza_set_ns(query, XMPP_NS_XEP_0092);
 	xmpp_stanza_add_child(iq, query);
 	xmpp_stanza_release(query);
 
@@ -607,7 +616,7 @@ static int tp_xmpp_version_handler(xmpp_conn_t * const   conn,
 	text = xmpp_stanza_new(xmpp_ctx);
 	if (text == NULL)
 		goto quit;
-	xmpp_stanza_set_text(text, sw_name);
+	xmpp_stanza_set_text(text, tp_xmpp_sw_name);
 	xmpp_stanza_add_child(item, text);
 	xmpp_stanza_release(text);
 
@@ -621,9 +630,69 @@ static int tp_xmpp_version_handler(xmpp_conn_t * const   conn,
 	text = xmpp_stanza_new(xmpp_ctx);
 	if (text == NULL)
 		goto quit;
-	xmpp_stanza_set_text(text, sw_version);
+	xmpp_stanza_set_text(text, tp_xmpp_sw_ver);
 	xmpp_stanza_add_child(item, text);
 	xmpp_stanza_release(text);
+
+	xmpp_send(conn, iq);
+
+quit:
+	if (iq != NULL)
+		xmpp_stanza_release(iq);
+	return 1;
+}
+
+static int tp_xmpp_disco_handler(xmpp_conn_t * const   conn,
+				 xmpp_stanza_t * const stanza,
+				 void * const          userdata)
+{
+	struct tp_xmpp_ctx *ctx = userdata;
+	xmpp_ctx_t         *xmpp_ctx = ctx->txc_xmpp_ctx;
+	xmpp_stanza_t      *iq;
+	xmpp_stanza_t      *query;
+	xmpp_stanza_t      *item;
+
+	PPPOAT_ASSERT(tp_xmpp_ctx_invariant(ctx));
+
+	iq = xmpp_stanza_reply(stanza);
+	if (iq == NULL)
+		goto quit;
+	xmpp_stanza_del_attribute(iq, "xmlns");
+	xmpp_stanza_set_type(iq, "result");
+
+	query = xmpp_stanza_new(xmpp_ctx);
+	if (query == NULL)
+		goto quit;
+	xmpp_stanza_set_name(query, "query");
+	xmpp_stanza_set_ns(query, XMPP_NS_XEP_0030_INFO);
+	xmpp_stanza_add_child(iq, query);
+	xmpp_stanza_release(query);
+
+	item = xmpp_stanza_new(xmpp_ctx);
+	if (item == NULL)
+		goto quit;
+	xmpp_stanza_set_name(item, "identity");
+	xmpp_stanza_set_attribute(item, "category", "client");
+	xmpp_stanza_set_attribute(item, "type", "bot");
+	xmpp_stanza_set_attribute(item, "name", tp_xmpp_sw_name);
+	xmpp_stanza_add_child(query, item);
+	xmpp_stanza_release(item);
+
+	item = xmpp_stanza_new(xmpp_ctx);
+	if (item == NULL)
+		goto quit;
+	xmpp_stanza_set_name(item, "feature");
+	xmpp_stanza_set_attribute(item, "var", XMPP_NS_XEP_0030_INFO);
+	xmpp_stanza_add_child(query, item);
+	xmpp_stanza_release(item);
+
+	item = xmpp_stanza_new(xmpp_ctx);
+	if (item == NULL)
+		goto quit;
+	xmpp_stanza_set_name(item, "feature");
+	xmpp_stanza_set_attribute(item, "var", XMPP_NS_XEP_0092);
+	xmpp_stanza_add_child(query, item);
+	xmpp_stanza_release(item);
 
 	xmpp_send(conn, iq);
 
