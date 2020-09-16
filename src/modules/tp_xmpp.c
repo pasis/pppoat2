@@ -459,30 +459,30 @@ static const char *tp_xmpp_conn_event_to_str(xmpp_conn_event_t status)
 	}
 }
 
-static int tp_xmpp_conn_reconnect_timer_cb(xmpp_conn_t *conn, void *userdata)
+static int tp_xmpp_conn_reconnect_timer_cb(xmpp_ctx_t *xmpp_ctx, void *userdata)
 {
 	struct tp_xmpp_ctx *ctx = userdata;
 	int                 rc;
 
-	rc = xmpp_connect_client(conn, NULL, 0, &tp_xmpp_conn_handler, ctx);
+	rc = xmpp_connect_client(ctx->txc_xmpp_conn, NULL, 0,
+				 &tp_xmpp_conn_handler, ctx);
 
 	/* Keep this timed handler if (rc != 0) and retry later. */
 	return rc != 0;
 }
 
+static void tp_xmpp_conn_reconnect_cancel(struct tp_xmpp_ctx *ctx)
+{
+	xmpp_global_timed_handler_delete(ctx->txc_xmpp_ctx,
+					 &tp_xmpp_conn_reconnect_timer_cb);
+}
+
 static void tp_xmpp_conn_reconnect(struct tp_xmpp_ctx *ctx)
 {
-	/*
-	 * TODO: rewrite with global timed handlers which appeared in
-	 * libstrophe-0.10. Ordinary timed handlers are not fired when
-	 * the connection is not connected. Therefore, they're not
-	 * suitable for reconnection logic.
-	 */
-	xmpp_timed_handler_delete(ctx->txc_xmpp_conn,
-				  &tp_xmpp_conn_reconnect_timer_cb);
-	xmpp_timed_handler_add(ctx->txc_xmpp_conn,
-			       &tp_xmpp_conn_reconnect_timer_cb,
-			       XMPP_RECONNECT_PERIOD, ctx);
+	tp_xmpp_conn_reconnect_cancel(ctx);
+	xmpp_global_timed_handler_add(ctx->txc_xmpp_ctx,
+				      &tp_xmpp_conn_reconnect_timer_cb,
+				      XMPP_RECONNECT_PERIOD, ctx);
 }
 
 static void tp_xmpp_conn_handler(xmpp_conn_t         *conn,
@@ -502,13 +502,14 @@ static void tp_xmpp_conn_handler(xmpp_conn_t         *conn,
 
 	ctx->txc_connected = status == XMPP_CONN_CONNECT;
 
-	if (ctx->txc_stopping) {
+	if (ctx->txc_stopping && !ctx->txc_connected) {
 		xmpp_stop(ctx->txc_xmpp_ctx);
 		return;
 	}
 
 	switch (status) {
 	case XMPP_CONN_CONNECT:
+		tp_xmpp_conn_reconnect_cancel(ctx);
 		presence = xmpp_presence_new(ctx->txc_xmpp_ctx);
 		PPPOAT_ASSERT(presence != NULL);
 		xmpp_send(conn, presence);

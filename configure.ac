@@ -15,7 +15,7 @@ CFLAGS="$CFLAGS $PTHREAD_CFLAGS"
 
 # XMPP transport module
 if test "x$enable_xmpp" != xno; then
-    PKG_CHECK_MODULES([libstrophe], [libstrophe >= 0.9.0],
+    PKG_CHECK_MODULES([libstrophe], [libstrophe >= 0.10.0],
         [
             AC_DEFINE([HAVE_MODULE_XMPP], [1], [Build XMPP module])
             LIBS="$libstrophe_LIBS $LIBS"
@@ -25,7 +25,7 @@ if test "x$enable_xmpp" != xno; then
         [libstrophe_found='no'])
 fi
 if test "x$enable_xmpp" = xyes -a "x$libstrophe_found" != xyes; then
-    AC_MSG_ERROR([libstrophe is required for xmpp module])
+    AC_MSG_ERROR([libstrophe 0.10.0 or higher is required for xmpp module])
 fi
 
 # Debug cflags
