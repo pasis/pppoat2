@@ -130,7 +130,7 @@ static int tp_xmpp_version_handler(xmpp_conn_t   *conn,
 static int tp_xmpp_disco_handler(xmpp_conn_t   *conn,
 				 xmpp_stanza_t *stanza,
 				 void          *userdata);
-static int tp_xmpp_send(struct tp_xmpp_ctx *ctx, struct pppoat_packet *pkt);
+static int tp_xmpp_send_pkt(struct tp_xmpp_ctx *ctx, struct pppoat_packet *pkt);
 
 static const char *tp_xmpp_sw_name = PACKAGE_NAME;
 static const char *tp_xmpp_sw_ver  = PACKAGE_VERSION;
@@ -259,12 +259,13 @@ static void tp_xmpp_worker(struct pppoat_thread *thread)
 		if (pppoat_semaphore_trywait(&ctx->txc_stop_sem))
 			break;
 
-		/* TODO make dynamic timeout to reduce latency on heavy load. */
+		/* TODO Make dynamic timeout to reduce latency on heavy load. */
 		xmpp_run_once(ctx->txc_xmpp_ctx, XMPP_LOOP_TIMEOUT);
 		while (ctx->txc_connected &&
 		       (pkt = pppoat_queue_dequeue(&ctx->txc_send_q)) != NULL) {
-			rc = tp_xmpp_send(ctx, pkt);
-			PPPOAT_ASSERT(rc == 0); /* XXX */
+			rc = tp_xmpp_send_pkt(ctx, pkt);
+			/* XXX Silently drop packets on errors. */
+			(void)rc;
 			pppoat_packet_put(pkts, pkt);
 		}
 	}
@@ -733,12 +734,15 @@ static char *tp_xmpp_id_alloc(struct tp_xmpp_ctx *ctx, enum tp_xmpp_id_t type)
 	return id;
 }
 
-static int tp_xmpp_send(struct tp_xmpp_ctx *ctx, struct pppoat_packet *pkt)
+static int tp_xmpp_send_pkt(struct tp_xmpp_ctx *ctx, struct pppoat_packet *pkt)
 {
 	xmpp_stanza_t *msg;
 	char          *id;
 	char          *base64;
 	int            rc;
+
+	if (ctx->txc_remote == NULL)
+		return -ENOENT;
 
 	id = tp_xmpp_id_alloc(ctx, XMPP_ID_MESSAGE);
 	PPPOAT_ASSERT(id != NULL); /* XXX */
