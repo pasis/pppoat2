@@ -119,7 +119,9 @@ void pppoat_conf_print_usage(int argc, char **argv)
 			printf("=<VALUE>");
 		printf("\t");
 		if (!conf_argv_opts[i].cao_argument)
-			printf("\t\t");
+			printf("\t");
+		if (strlen(conf_argv_opts[i].cao_opt_long) < 8)
+			printf("\t");
 		printf("%s", conf_argv_opts[i].cao_descr);
 		printf("\n");
 	}
