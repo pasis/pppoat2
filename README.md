@@ -14,6 +14,19 @@ can be extended with new interface modules.
 Current version is the 3rd iteration with reworked architecture. Previous
 version can be found at <https://github.com/pasis/pppoat>.
 
+Examples
+--------
+
+The following example creates tunnel using pppd interface and XMPP transport.
+IP addresses will be assigned by pppd automatically.
+
+```
+Server# sudo pppoat -s -i pppd -t xmpp xmpp.jid=pppoat@domain.com xmpp.passwd=password xmpp.remote=pppoat2@domain.com pppd.ip=10.0.0.1:10.0.0.2
+Client# sudo pppoat -i pppd -t xmpp xmpp.jid=pppoat2@domain.com xmpp.passwd=password xmpp.remote=pppoat@domain.com
+```
+
+Check docs/ directory for more configuration examples.
+
 Transport modules
 -----------------
 
