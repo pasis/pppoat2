@@ -1,39 +1,17 @@
 language: c
-
-os:
-    - linux
-    - osx
-
+dist: focal
+install:
+  - sudo apt-get update
+  - sudo apt-get -y install autoconf-archive ppp libstrophe-dev
 compiler:
     - gcc
     - clang
-
-matrix:
-    include:
-        - os: osx
-          env: CONFIGURE_OPT="--enable-xmpp"
-
-addons:
-    apt:
-        packages:
-            - autoconf-archive
-            - ppp
-    homebrew:
-        packages:
-            - autoconf-archive
-            - libstrophe
-        update: true
-
 before_script:
     - ./autogen.sh
-
 script:
     - ./configure ${CONFIGURE_OPT}
     - make
     - make check
-
 env:
-    global:
-        - PKG_CONFIG_PATH="$(brew --prefix)/opt/openssl/lib/pkgconfig:$PKG_CONFIG_PATH"
-    matrix:
-        - CONFIGURE_OPT="--disable-xmpp"
+    - CONFIGURE_OPT="--disable-xmpp"
+    - CONFIGURE_OPT="--enable-xmpp"
