@@ -191,6 +191,7 @@ int main(int argc, char **argv)
 	struct pppoat_module      *tp_mod;
 	char                      *file;
 	char                      *name;
+	bool                       verbose;
 	bool                       flag;
 	int                        rc;
 
@@ -232,7 +233,9 @@ int main(int argc, char **argv)
 		}
 	}
 
-	pppoat_conf_dump(ctx->p_conf);
+	pppoat_conf_find_bool(ctx->p_conf, "verbose", &verbose);
+	if (verbose)
+		pppoat_conf_dump(ctx->p_conf);
 
 	/*
 	 * Re-init logging system, it may be configured via configuration.
