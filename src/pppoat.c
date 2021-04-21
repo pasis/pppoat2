@@ -36,7 +36,7 @@
 
 static struct pppoat_semaphore exit_sem;
 
-static const pppoat_log_level_t default_log_level = PPPOAT_DEBUG;
+static const pppoat_log_level_t default_log_level = PPPOAT_INFO;
 static struct pppoat_log_driver * const default_log_drv =
 						&pppoat_log_driver_stderr;
 
@@ -63,12 +63,16 @@ struct pppoat_module_impl *pppoat_modules[] = {
 
 static int log_init(struct pppoat_conf *conf)
 {
-	struct pppoat_log_driver *drv   = NULL;
-	pppoat_log_level_t        level = 0;
+	struct pppoat_log_driver *drv     = NULL;
+	pppoat_log_level_t        level   = 0;
+	bool                      verbose = false;
 	int                       rc;
 
+	if (conf != NULL)
+		pppoat_conf_find_bool(conf, "verbose", &verbose);
+
 	drv   = default_log_drv;
-	level = default_log_level;
+	level = verbose ? PPPOAT_DEBUG : default_log_level;
 
 	/* TODO Check log driver/level in conf. */
 
