@@ -35,5 +35,7 @@ void pppoat_queue_fini(struct pppoat_queue *q);
 void pppoat_queue_enqueue(struct pppoat_queue *q, struct pppoat_packet *pkt);
 struct pppoat_packet *pppoat_queue_dequeue(struct pppoat_queue *q);
 struct pppoat_packet *pppoat_queue_dequeue_last(struct pppoat_queue *q);
+struct pppoat_packet *pppoat_queue_front(struct pppoat_queue *q);
+void pppoat_queue_pop_front(struct pppoat_queue *q);
 
 #endif /* __PPPOAT_QUEUE_H__ */

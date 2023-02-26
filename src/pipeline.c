@@ -25,6 +25,8 @@
 #include "packet.h"
 #include "pipeline.h"
 
+#include <string.h>
+
 static void pipeline_blocking_thread(struct pppoat_thread *thread);
 static void pipeline_loop_thread(struct pppoat_thread *thread);
 
@@ -35,6 +37,8 @@ static struct pppoat_list_descr pipeline_descr =
 int pppoat_pipeline_init(struct pppoat_pipeline *p)
 {
 	int rc = 0;
+
+	memset(p, 0, sizeof(*p));
 
 	p->pl_running = false;
 	pppoat_list_init(&p->pl_modules, &pipeline_descr);

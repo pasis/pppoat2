@@ -69,3 +69,21 @@ struct pppoat_packet *pppoat_queue_dequeue_last(struct pppoat_queue *q)
 
 	return pkt;
 }
+
+struct pppoat_packet *pppoat_queue_front(struct pppoat_queue *q)
+{
+	struct pppoat_packet *pkt;
+
+	pppoat_mutex_lock(&q->q_lock);
+	pkt = pppoat_list_head(&q->q_queue);
+	pppoat_mutex_unlock(&q->q_lock);
+
+	return pkt;
+}
+
+void pppoat_queue_pop_front(struct pppoat_queue *q)
+{
+	pppoat_mutex_lock(&q->q_lock);
+	(void)pppoat_list_pop(&q->q_queue);
+	pppoat_mutex_unlock(&q->q_lock);
+}

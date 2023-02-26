@@ -46,6 +46,7 @@ extern struct pppoat_module_impl pppoat_module_if_stdio;
 extern struct pppoat_module_impl pppoat_module_if_tun;
 extern struct pppoat_module_impl pppoat_module_if_tap;
 /* Transport modules. */
+extern struct pppoat_module_impl pppoat_module_tp_http;
 extern struct pppoat_module_impl pppoat_module_tp_udp;
 extern struct pppoat_module_impl pppoat_module_tp_xmpp;
 
@@ -55,6 +56,7 @@ struct pppoat_module_impl *pppoat_modules[] = {
 	&pppoat_module_if_stdio,
 	&pppoat_module_if_tun,
 	&pppoat_module_if_tap,
+	&pppoat_module_tp_http,
 	&pppoat_module_tp_udp,
 #ifdef HAVE_MODULE_XMPP
 	&pppoat_module_tp_xmpp,
